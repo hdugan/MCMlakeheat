@@ -3,6 +3,8 @@ library(tidyverse)
 library(lubridate)
 library(patchwork)
 
+source('src/getLakeLevels.R')
+
 # Priscu, J. 2023. Conductivity, temperature, and depth (CTD) vertical profiles collected from lakes in the 
 # McMurdo Dry Valleys, Antarctica (1993-2023, ongoing) ver 17. Environmental Data Initiative. 
 # https://doi.org/10.6073/pasta/650871571843bde5e0db6fb52cf549a4 (Accessed 2024-06-25).
@@ -14,7 +16,7 @@ infile1 <- tempfile()
 download.file(inUrl1,infile1,method="curl")
 
 ctd <- read_csv(infile1) |> 
-  mutate(date_time = mdy_hm(date_time)) |> 
+  mutate(date_time = as.Date(mdy_hm(date_time))) |> 
   # rename(lake = location_name) |> 
   mutate(lake = case_when(location_name == 'Lake Fryxell' ~ 'Lake Fryxell', 
                           location_name == 'Lake Hoare' ~ 'Lake Hoare', 
