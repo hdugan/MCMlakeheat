@@ -2,6 +2,9 @@
 library(tidyverse)
 library(lubridate)
 library(zoo)
+library(mgcv)
+library(marelac)
+library(wql)
 
 # source DIC function 
 source('https://raw.githubusercontent.com/hdugan/lake_DIC/master/lake_DIC.R')
@@ -86,26 +89,104 @@ dic.carbonate = dic.join |>
 ions.df = ions |> select(-contains('comments'), -dataset_code, -limno_run, -filename) |> 
   select(location_name:depth_m, depth_masl, everything()) |> 
   rowwise() |> 
+  filter(!is.na(cl_mgl)) |>  # dominant ion
   mutate(cation_sum = sum(li_mgl, na_mgl, k_mgl, mg_mgl, ca_mgl, f_mgl, na.rm = T)) |> 
-  mutate(anion_sum = sum(cl_mgl, br_mgl, so4_mgl, si_mgl, na.rm = T)) |> 
+  mutate(anion_sum = sum(cl_mgl, br_mgl, so4_mgl, na.rm = T)) |> # remove silica
   mutate(cation_sumM = sum(li_mm, na_mm, k_mm, mg_mm, ca_mm, f_mm, na.rm = T)) |> 
   mutate(anion_sumM = sum(cl_mm, br_mm, so4_mm, na.rm = T)) |> # remove silica
-  select(location_name:depth_masl, cation_sum, anion_sum, cation_sumM, anion_sumM)
+  select(location_name:depth_masl, cation_sum, anion_sum, cation_sumM, anion_sumM) |> 
+  filter(!(location_name == 'West Lake Bonney' & date_time == as.Date('1998-11-11') & depth_m == 30))
 
 # Full join of data
 
 full.df = ions.df |> left_join(dic.carbonate, by = join_by(location_name, date_time, depth_m))
 
 salinity.df = full.df |> 
-  select(location_name:depth_m, cation_sum, anion_sum, bicarbonate_mgkg, carbonate_mgkg) |> 
+  select(location_name:depth_m, ctd_temp_c, ctd_conductivity_mscm, cation_sum, anion_sum, bicarbonate_mgkg, carbonate_mgkg) |> 
   filter(!is.na(bicarbonate_mgkg)) |> 
-  mutate(salinity = sum(cation_sum, anion_sum, bicarbonate_mgkg, carbonate_mgkg))
+  mutate(salinity = sum(cation_sum, anion_sum, bicarbonate_mgkg, carbonate_mgkg)) |> 
+  mutate(density = sw_dens(S = salinity/1000, t = ctd_temp_c, p = 1 + (depth_m/10))) |> 
+  mutate(specCond = ctd_conductivity_mscm/(1 + 0.020*(ctd_temp_c - 5))) |> 
+  mutate(salinity.derivedCond = convert_RtoS(R = ctd_conductivity_mscm/42.914, t = ctd_temp_c, P = 1 + (depth_m/10))) |> 
+  mutate(salinity.derivedCond2 = ec2pss(ctd_conductivity_mscm, t = ctd_temp_c, p = 1 + depth_m)) |> 
+  left_join(ll.interp |> select(-lake, -masl), by = join_by(location_name, date_time)) |> 
+  mutate(depth.asl = masl.approx - depth_m)
+  
+# C(35, 15, 0) is the conductivity of standard seawater (35‰) at 15 °C which by
+# definition has a conductivity equal to that of the standard KCl solution at
+# that temperature and its value is 4.2914 Siemens/meter or 42.914 mS/cm
+# Density calculated here using Gibbs function
+# Feistel R, 2008. A Gibbs function for seawater thermodynamics for -6 to 80 dgC and salinity up to 120 g/kg. Deep-Sea Research I, 55, 1639-1671.
+
+
+#################### Create salinity transfer functions ###################
+df.elb = salinity.df |> filter(location_name == 'East Lake Bonney')
+m.elb <- gam(salinity/1000 ~ s(depth.asl, k = 20), data = df.elb)
+df.elb.pred <- data.frame(depth.asl = seq(floor(min(df.elb$depth.asl)), ceiling(max(df.elb$depth.asl)), by = 0.5)) %>%
+  mutate(pred = predict(m.elb, .)) |> 
+  mutate(location_name = 'East Lake Bonney')
+
+df.lf = salinity.df |> filter(location_name == 'Lake Fryxell')
+m.lf <- gam(salinity/1000 ~ s(depth.asl, k = 20), data = df.lf)
+df.lf.pred <- data.frame(depth.asl = seq(floor(min(df.lf$depth.asl)), ceiling(max(df.lf$depth.asl)), by = 0.5)) %>%
+  mutate(pred = predict(m.lf, .)) |> 
+  mutate(location_name = 'Lake Fryxell')
+
+df.lh = salinity.df |> filter(location_name == 'Lake Hoare')
+m.lh <- gam(salinity/1000 ~ s(depth.asl, k = 20), data = df.lh)
+df.lh.pred <- data.frame(depth.asl = seq(floor(min(df.lh$depth.asl)), ceiling(max(df.lh$depth.asl)), by = 0.5)) %>%
+  mutate(pred = predict(m.lh, .)) |> 
+  mutate(location_name = 'Lake Hoare')
+
+df.wlb = salinity.df |> filter(location_name == 'West Lake Bonney') |> 
+  filter(year(date_time) >= 2012)
+m.wlb <- gam(salinity/1000 ~ s(depth.asl, k = 20, m = 1), data = df.wlb)
+df.wlb.pred <- data.frame(depth.asl = seq(floor(min(df.wlb$depth.asl)), ceiling(max(df.wlb$depth.asl)), by = 0.5)) %>%
+  mutate(pred = predict(m.wlb, .)) |> 
+  mutate(location_name = 'West Lake Bonney')
+
+df.pred.salinty = df.lh.pred |> bind_rows(df.lf.pred, df.elb.pred, df.wlb.pred) |> 
+  mutate(pred = as.numeric(pred))
+write_csv(df.pred.salinty, 'dataout/salinityTransferTable.csv')
+
+################################# PLOTS #################################
+ggplot(salinity.df) +
+  geom_path(aes(x = salinity/1000, y = depth.asl, group = date_time, col = year(date_time))) +
+  geom_point(aes(x = salinity/1000, y = depth.asl, group = date_time, col = year(date_time))) +
+  # geom_path(aes(x = salinity.derivedCond, y = depth.asl, group = date_time), col = 'red') +
+  # scale_y_reverse() +
+  geom_point(data = df.pred.salinty, aes(x = pred, depth.asl), col = 'red') +
+  xlab('Salinity (g/L)') +
+  facet_wrap(~location_name, scales = 'free')
+
+ggplot(salinity.df |> filter(year(date_time) == 2019)) +
+  geom_path(aes(x = density, y = depth_m, group = date_time)) +
+  geom_point(aes(x = density, y = depth_m, group = date_time)) +
+  geom_path(data = density.df, aes(x = density_kgm3*1000, y = depth_m), col = 'red3') +
+  geom_point(data = density.df, aes(x = density_kgm3*1000, y = depth_m), col = 'red3') +
+  scale_y_reverse() +
+  xlab('Density (g/m3)') + ylab('Depth (m)') +
+  facet_wrap(~location_name, scales = 'free') +
+  labs(caption = 'Red = measured 2022, Black = sum ions -> density using Gibbs equation')
+# ggsave('figures/densityComp.png', width = 5, height = 5, dpi = 500)
 
 ggplot(salinity.df) +
-  geom_path(aes(x = salinity/1000, y = depth_m, group = date_time, col = year(date_time))) +
-  geom_point(aes(x = salinity/1000, y = depth_m, group = date_time, col = year(date_time))) +
+  geom_point(aes(y = salinity/1000, x = specCond, group = date_time), col = 'red3', size = 0.7) +
+  geom_point(aes(y = salinity/1000, x = ctd_conductivity_mscm, group = date_time), size = 0.7) +
   scale_y_reverse() +
-  xlab('Salinity (g/L)') +
+  ylab('Salinity (g/L)') + xlab('Conductivity (mS/cm)') +
+  facet_wrap(~location_name, scales = 'free') +
+  labs(caption = 'CTD casts vs ') +
+  labs(caption = 'Black = raw conductivity, Red = temp corrected to 5°C')
+# ggsave('figures/densityCondComp.png', width = 5, height = 5, dpi = 500) 
+
+ggplot(salinity.df |> filter(year(date_time) == 2019)) +
+  geom_path(aes(x = ctd_temp_c , y = depth_m, group = date_time)) +
+  geom_point(aes(x = ctd_temp_c , y = depth_m, group = date_time)) +
+  geom_path(data = density.df, aes(x = temp_C, y = depth_m), col = 'red3') +
+  geom_point(data = density.df, aes(x = temp_C, y = depth_m), col = 'red3') +
+  scale_y_reverse() +
+  xlab('Density (g/m3)') +
   facet_wrap(~location_name, scales = 'free')
 
          

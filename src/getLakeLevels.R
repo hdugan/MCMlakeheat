@@ -16,12 +16,19 @@ ll <- read_csv(infile1) |>
   rename(masl = `lake level(masl)`) |> 
   filter(lake %in% c('Lake Bonney', 'Lake Fryxell','Lake Hoare'))
 
+# Approximate and duplicate for Lake Bonney
 ll.interp = expand_grid(date_time = seq.Date(as.Date('1991-01-26'), as.Date('2023-01-22'), by = 'day'),
                         lake = c('Lake Bonney', 'Lake Fryxell','Lake Hoare')) |> 
   left_join(ll |> select(date_time, lake, masl)) |> 
   arrange(lake, date_time, masl) |> 
   group_by(lake) |>
-  mutate(masl.approx = na.approx(masl, na.rm = FALSE))
+  mutate(masl.approx = na.approx(masl, na.rm = FALSE)) |> 
+  mutate(location_name = case_when(lake == 'Lake Fryxell' ~ 'Lake Fryxell', 
+                                   lake == 'Lake Hoare' ~ 'Lake Hoare', 
+                                   lake == 'Lake Bonney' ~ 'East Lake Bonney')) %>% 
+  bind_rows(. |> filter(lake == 'Lake Bonney') |> mutate(location_name = 'West Lake Bonney'))
+
+
 
 # Graph with linear interpolation
 ggplot(ll.interp) +
