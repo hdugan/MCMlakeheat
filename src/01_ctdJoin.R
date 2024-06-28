@@ -5,8 +5,7 @@ library(patchwork)
 
 source('src/getCTD.R')
 source('src/gethypso.R')
-
-a = ctd |> filter(location_name == 'West Lake Bonney' & date_time == as.Date('2002-12-16'))
+source('src/functions/SpecHeat_Water.R')
 
 # Create SpecCond at 0.1 increments every 0.1 m
 ctd.join = ctd |> 
@@ -66,10 +65,10 @@ df.lh.clean = clean.ctd(lakename = 'Lake Hoare')
 df.elb.clean = clean.ctd(lakename = 'East Lake Bonney') |> 
   filter(date_time != as.Date('1995-01-14')) #temp profile looks wrong
 
+# Combine the four lakes 
 df.clean = df.lf.clean |> bind_rows(df.lh.clean, df.elb.clean, df.wlb.clean)
 
-df.wlb.clean |> filter(ctd_conductivity_mscm > 85 & depth.asl > 28)
-
+# Check plots 
 p1 = ggplot(df.clean) +
   geom_path(aes(x = ctd_temp_c, y = depth.asl, group = date_time, color = year(date_time))) +
   ylab('Elevation (m asl)') + xlab('Temp (°C)') +
@@ -101,14 +100,14 @@ sal.pred = read_csv('dataout/condSalTransfer.csv') |>
   rename(sal.pred = pred)
 
 df.spc = df.spc |> 
-  left_join(sal.pred) |> 
-  mutate(depth.asl = as.character(depth.asl)) #need to be character to join
+  left_join(sal.pred, by = join_by(location_name, specCond))
 df.spc |> filter(is.na(sal.pred))
 
 # Load salinity/depth relationship
 salz.pred = read_csv('dataout/salinityTransferTable.csv') |> 
   filter(location_name == 'East Lake Bonney') %>%
-  mutate(depth.asl = as.character(depth.asl)) %>%
+  mutate(depth.asl.char = as.character(depth.asl)) %>%
+  select(-depth.asl) %>%
   bind_rows(. |> filter(year == 1995) |> mutate(year = 1993)) %>% # ions started in 1995, so use 1995 profiles for 1993 and 1994
   bind_rows(. |> filter(year == 1995) |> mutate(year = 1994)) %>%
   bind_rows(. |> filter(year == 2019) |> mutate(year = 2020)) %>%
@@ -117,43 +116,30 @@ salz.pred = read_csv('dataout/salinityTransferTable.csv') |>
   bind_rows(. |> filter(year == 2019) |> mutate(year = 2023))
 
 # If no conductivity value, replace with salinity table 
-df.spc2 = df.spc |> left_join(salz.pred, by = join_by(year, location_name, depth.asl)) |> 
+df.spc2 = df.spc |> left_join(salz.pred, by = join_by(year, location_name, depth.asl.char)) |> 
   mutate(sal.pred2 = if_else(is.na(sal.pred), pred, sal.pred))
 
 # Ok, but some of the transfer table doesn't go deep enough. Interpolate with constant 
 df.spc3 = df.spc2 |> 
-  mutate(across(c(sal.pred2), ~ na.approx(.x, na.rm = FALSE, maxgap = 50, rule = 2)))
+  group_by(location_name, date_time) |> 
+  mutate(across(c(sal.pred2), ~ na.approx(.x, na.rm = FALSE, maxgap = 50, rule = 2))) |> 
+  select(-sal.pred, -pred)
 
 # Check plot 
-
-##################### 
-
-a = ctd.join |> left_join(sal.pred, by = join_by(location_name, specCond))
-a |> filter(is.na(pred)) |> filter(location_name == 'Lake Hoare')
-
-table(b$location_name)
-
-# Join hyspometry
-left_join(hypo_new |> rename(depth.asl = Elevation_masl) |>  mutate(depth.asl = round(depth.asl, 1)), 
-          by = c('location_name', 'depth.asl')) |> 
-
-# Calculate salinity based on year and depth
-# Every 0.5 m
-salinity.pred = read_csv('dataout/salinityTransferTable.csv') |> 
-  bind_rows(salinity.pred |> filter(year == 1995) |> mutate(year = 1993)) |> # ions started in 1995, so use 1995 profiles for 1993 and 1994
-  bind_rows(salinity.pred |> filter(year == 1995) |> mutate(year = 1994)) 
-  
-
-a = ctd.join |> left_join(salinity.pred, by = join_by(year, location_name, depth.asl))
-
-View(a |> filter(is.na(pred)))
-
-ggplot(a) + 
-  geom_point(aes(x = ctd_conductivity_mscm, y = pred)) +
+ggplot(df.spc3) +
+  geom_path(aes(x = sal.pred2, y = depth.asl, group = date_time, color = year(date_time))) +
+  ylab('Elevation (m asl)') + xlab('Salinity (mg/L)') +
+  scale_colour_viridis_c(option = 'F', name = 'Year') +
+  theme_bw(base_size = 9) +
   facet_wrap(~location_name, scales = 'free')
 
-salinity.df
 
-ggplot(salinity.df) + 
-  geom_point(aes(x = specCond, y = salinity)) +
-  facet_wrap(~location_name, scales = 'free')
+##################### Add specific heat capacity ########################
+# equation not build for temperatures < 0°C or S > 180, but what can you do
+df.spcH = df.spc3 |> 
+  mutate(spHeat = SW_SpcHeat(Temp = ctd_temp_c, S = sal.pred2, P = 1 + (depth_m/10))) #units deafult, °C, ppt, bar
+
+quantile(df.spcH$spHeat)
+
+
+
