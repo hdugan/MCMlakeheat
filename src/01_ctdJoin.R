@@ -134,11 +134,12 @@ ggplot(df.spc3) +
   facet_wrap(~location_name, scales = 'free')
 
 
-##################### Add specific heat capacity ########################
+##################### Add specific heat capacity and density ########################
 # equation not build for temperatures < 0°C or S > 180, but what can you do
+# Units J/kg K
 df.spcH = df.spc3 |> 
-  mutate(spHeat = SW_SpcHeat(Temp = ctd_temp_c, S = sal.pred2, P = 1 + (depth_m/10))) #units deafult, °C, ppt, bar
-
+  mutate(spHeat_JkgK = SW_SpcHeat(Temp = ctd_temp_c, S = sal.pred2, P = 1 + (depth_m/10))) |> #units deafult, °C, ppt, bar
+  mutate(density = sw_dens(S = salinity/1000, t = ctd_temp_c, p = 1 + (depth_m/10))) |> 
 quantile(df.spcH$spHeat)
 
 

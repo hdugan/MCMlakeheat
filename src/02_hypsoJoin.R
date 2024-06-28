@@ -15,3 +15,5 @@ hypo.use = hypo_new |>
 df.spcH |> left_join(hypo.use, by = join_by(depth.asl.char, location_name))
 
   
+# caloric content (Kelvin) of ice or water (avg temp x thickness x sp heat)
+# specific heat in J/kgK
