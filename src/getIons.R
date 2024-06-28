@@ -121,35 +121,6 @@ salinity.df = full.df |>
 # Feistel R, 2008. A Gibbs function for seawater thermodynamics for -6 to 80 dgC and salinity up to 120 g/kg. Deep-Sea Research I, 55, 1639-1671.
 
 
-#################### Create salinity transfer functions ###################
-df.elb = salinity.df |> filter(location_name == 'East Lake Bonney')
-m.elb <- gam(salinity/1000 ~ s(depth.asl, k = 20), data = df.elb)
-df.elb.pred <- data.frame(depth.asl = seq(floor(min(df.elb$depth.asl)), ceiling(max(df.elb$depth.asl)), by = 0.5)) %>%
-  mutate(pred = predict(m.elb, .)) |> 
-  mutate(location_name = 'East Lake Bonney')
-
-df.lf = salinity.df |> filter(location_name == 'Lake Fryxell')
-m.lf <- gam(salinity/1000 ~ s(depth.asl, k = 20), data = df.lf)
-df.lf.pred <- data.frame(depth.asl = seq(floor(min(df.lf$depth.asl)), ceiling(max(df.lf$depth.asl)), by = 0.5)) %>%
-  mutate(pred = predict(m.lf, .)) |> 
-  mutate(location_name = 'Lake Fryxell')
-
-df.lh = salinity.df |> filter(location_name == 'Lake Hoare')
-m.lh <- gam(salinity/1000 ~ s(depth.asl, k = 20), data = df.lh)
-df.lh.pred <- data.frame(depth.asl = seq(floor(min(df.lh$depth.asl)), ceiling(max(df.lh$depth.asl)), by = 0.5)) %>%
-  mutate(pred = predict(m.lh, .)) |> 
-  mutate(location_name = 'Lake Hoare')
-
-df.wlb = salinity.df |> filter(location_name == 'West Lake Bonney') |> 
-  filter(year(date_time) >= 2012)
-m.wlb <- gam(salinity/1000 ~ s(depth.asl, k = 20, m = 1), data = df.wlb)
-df.wlb.pred <- data.frame(depth.asl = seq(floor(min(df.wlb$depth.asl)), ceiling(max(df.wlb$depth.asl)), by = 0.5)) %>%
-  mutate(pred = predict(m.wlb, .)) |> 
-  mutate(location_name = 'West Lake Bonney')
-
-df.pred.salinty = df.lh.pred |> bind_rows(df.lf.pred, df.elb.pred, df.wlb.pred) |> 
-  mutate(pred = as.numeric(pred))
-write_csv(df.pred.salinty, 'dataout/salinityTransferTable.csv')
 
 ################################# PLOTS #################################
 ggplot(salinity.df) +
