@@ -53,5 +53,5 @@ plotCTD('Lake Hoare') /
 plotCTD('East Lake Bonney') /
 plotCTD('West Lake Bonney') 
 
-ggsave('figures/ctdprofiles.png', width = 6, height = 12, dpi = 500)  
+# ggsave('figures/ctdprofiles.png', width = 6, height = 12, dpi = 500)  
 

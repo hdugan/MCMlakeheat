@@ -6,6 +6,8 @@ library(mgcv)
 library(marelac)
 library(wql)
 
+# source lake lakels
+source('src/getLakeLevels.R')
 # source DIC function 
 source('https://raw.githubusercontent.com/hdugan/lake_DIC/master/lake_DIC.R')
 
@@ -21,7 +23,6 @@ download.file(inUrl1,infile1,method="curl")
 ions <- read_csv(infile1) |> 
   mutate(date_time = as.Date(mdy_hm(date_time)))
   
-
 # Priscu, J.C. 2023. Dissolved inorganic carbon (DIC) concentrations in discrete water column samples 
 # collected from lakes in the McMurdo Dry Valleys, Antarctica (1993-2022, ongoing). Environmental Data Initiative. 
 # DOI: 10.6073/pasta/fadcc745b6ecb6d1942dda95ef373eab. Dataset accessed 26 June 2024.
@@ -89,7 +90,8 @@ dic.carbonate = dic.join |>
 ions.df = ions |> select(-contains('comments'), -dataset_code, -limno_run, -filename) |> 
   select(location_name:depth_m, depth_masl, everything()) |> 
   rowwise() |> 
-  filter(!is.na(cl_mgl)) |>  # dominant ion
+  filter(!is.na(cl_mgl)) |>  # dominant anion
+  filter(!is.na(na_mgl)) |>  # dominant cation
   mutate(cation_sum = sum(li_mgl, na_mgl, k_mgl, mg_mgl, ca_mgl, f_mgl, na.rm = T)) |> 
   mutate(anion_sum = sum(cl_mgl, br_mgl, so4_mgl, na.rm = T)) |> # remove silica
   mutate(cation_sumM = sum(li_mm, na_mm, k_mm, mg_mm, ca_mm, f_mm, na.rm = T)) |> 
