@@ -2,6 +2,10 @@
 library(tidyverse)
 library(lubridate)
 library(patchwork)
+library(zoo)
+library(mgcv)
+library(marelac)
+library(wql)
 
 source('src/getCTD.R')
 source('src/gethypso.R')
@@ -123,6 +127,7 @@ df.spc2 = df.spc |> left_join(salz.pred, by = join_by(year, location_name, depth
 df.spc3 = df.spc2 |> 
   group_by(location_name, date_time) |> 
   mutate(across(c(sal.pred2), ~ na.approx(.x, na.rm = FALSE, maxgap = 50, rule = 2))) |> 
+  mutate(sal.pred2 = if_else(sal.pred2 < 0, 0, sal.pred2)) %>% 
   select(-sal.pred, -pred)
 
 # Check plot 
@@ -138,9 +143,10 @@ ggplot(df.spc3) +
 # equation not build for temperatures < 0°C or S > 180, but what can you do
 # Units J/kg K
 df.spcH = df.spc3 |> 
-  mutate(spHeat_JkgK = SW_SpcHeat(Temp = ctd_temp_c, S = sal.pred2, P = 1 + (depth_m/10))) |> #units deafult, °C, ppt, bar
-  mutate(density = sw_dens(S = salinity/1000, t = ctd_temp_c, p = 1 + (depth_m/10))) |> 
-quantile(df.spcH$spHeat)
+  mutate(spHeat_J_kgK = SW_SpcHeat(Temp = ctd_temp_c, S = sal.pred2, P = 1 + (depth_m/10))) |> #units deafult, °C, ppt, bar
+  mutate(density_kg_m3 = sw_dens(S = sal.pred2, t = ctd_temp_c, p = 1 + (depth_m/10)))
 
+quantile(df.spcH$spHeat_J_kgK)
+quantile(df.spcH$density_kg_m3)
 
 

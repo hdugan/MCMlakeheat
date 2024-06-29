@@ -32,7 +32,8 @@ hypo_new = read_csv('datain/hypsometry_lidar.csv') |>
   select(-Dataset) |> 
   group_by(lake) |> 
   mutate(area.lag = lag(Area_2D, default = 0), elev.lag = lag(Elevation_masl, default = 0)) |> 
-  mutate(vol_layer_m3 = ((Elevation_masl-elev.lag)/3)*(Area_2D + area.lag + (sqrt(Area_2D*area.lag)))) |> 
+  # mutate(vol_layer_m3 = ((Elevation_masl-elev.lag)/3)*(Area_2D + area.lag + (sqrt(Area_2D*area.lag)))) |> 
+  mutate(vol_layer_m3 = Area_2D * 0.1) %>% 
   mutate(cum_vol_m3 = cumsum(vol_layer_m3)) |> 
   select(-area.lag, -elev.lag, -`Depth (0 = bottom of the lake)`, -Plane_Height, -VolumeLayer, -Volume, -lake) |> 
   mutate(location_name = case_when(lake == 'LF' ~ 'Lake Fryxell', 
