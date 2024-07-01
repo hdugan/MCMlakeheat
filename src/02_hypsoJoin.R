@@ -2,6 +2,7 @@
 library(tidyverse)
 library(lubridate)
 library(patchwork)
+library(scico)
 
 source('src/gethypso.R')
 
@@ -27,7 +28,8 @@ hypo.join = df.spcH |>
   mutate(temp_K = ctd_temp_c + 273.15) %>% 
   mutate(spHeat_J_m3K = spHeat_J_kgK * density_kg_m3) %>% 
   mutate(heat_J = spHeat_J_m3K * vol_layer_m3 * temp_K) %>% 
-  mutate(heat_J_m2 = heat_J/Area_2D)
+  mutate(heat_J_m2 = heat_J/Area_2D) |> 
+  ungroup()
 # caloric content (Kelvin) of ice or water (avg temp x thickness x sp heat)
 
 heat.day = hypo.join %>% 
@@ -45,20 +47,30 @@ ggplot(hypo.join) +
   facet_wrap(~location_name, scales = 'free')
 
 # Plot heat maps
-h1 = ggplot(hypo.join %>% filter(location_name == 'Lake Fryxell')) + 
-  geom_tile(aes(x = date_time, y = depth.asl, fill = heat_J_m2), width = 150) +
-  scale_fill_viridis_c(option = 'F')
-  
-h2 = ggplot(hypo.join %>% filter(location_name == 'Lake Hoare')) + 
-  geom_tile(aes(x = date_time, y = depth.asl, fill = heat_J_m2), width = 150) +
-  scale_fill_viridis_c(option = 'F')
+makeHeat <- function(name) {
+  ggplot(hypo.join %>% filter(location_name == name)) + 
+    geom_tile(aes(x = date_time, y = depth.asl, fill = heat_J_m2/1e6), width = 150,height = 0.1) +
+    scale_fill_scico(palette = 'roma', direction = -1, name = 'MJ/m2') +
+    labs(title = name) +
+    ylab('Depth asl (m)') +
+    theme_bw(base_size = 9) +
+    theme(axis.title.x = element_blank())
+}
 
-h3 = ggplot(hypo.join %>% filter(location_name == 'East Lake Bonney')) + 
-  geom_tile(aes(x = date_time, y = depth.asl, fill = heat_J_m2), width = 150) +
-  scale_fill_viridis_c(option = 'F')
-
-h4 = ggplot(hypo.join %>% filter(location_name == 'West Lake Bonney')) + 
-  geom_tile(aes(x = date_time, y = depth.asl, fill = heat_J_m2), width = 150) +
-  scale_fill_viridis_c(option = 'F')
+h1 = makeHeat('Lake Fryxell')
+h2 = makeHeat('Lake Hoare')
+h3 = makeHeat('East Lake Bonney')
+h4 = makeHeat('West Lake Bonney')
 
 h1 + h2 + h3 + h4
+
+ggsave('figures/MDVlakeHeatContent.png', width = 6, height = 4, dpi = 500)
+
+
+a = hypo.join %>% filter(location_name == 'West Lake Bonney') |> 
+  slice(1:1000) |> 
+  select(date_time, depth.asl, heat_J, heat_J_m2) |> 
+  filter(!is.na(heat_J))
+
+ggplot(hypo.join %>% filter(location_name == 'West Lake Bonney')) + 
+  geom_tile(aes(x = as.factor(date_time), y = depth.asl, fill = heat_J), height = 0.1)
