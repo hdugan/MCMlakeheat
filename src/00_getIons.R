@@ -7,7 +7,7 @@ library(marelac)
 library(wql)
 
 # source lake lakels
-source('src/getLakeLevels.R')
+source('src/00_getLakeLevels.R')
 # source DIC function 
 source('https://raw.githubusercontent.com/hdugan/lake_DIC/master/lake_DIC.R')
 

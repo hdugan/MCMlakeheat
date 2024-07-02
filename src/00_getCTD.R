@@ -3,7 +3,7 @@ library(tidyverse)
 library(lubridate)
 library(patchwork)
 
-source('src/getLakeLevels.R')
+source('src/00_getLakeLevels.R')
 
 # Priscu, J. 2023. Conductivity, temperature, and depth (CTD) vertical profiles collected from lakes in the 
 # McMurdo Dry Valleys, Antarctica (1993-2023, ongoing) ver 17. Environmental Data Initiative. 

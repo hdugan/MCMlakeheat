@@ -7,8 +7,8 @@ library(mgcv)
 library(marelac)
 library(wql)
 
-source('src/getCTD.R')
-source('src/gethypso.R')
+source('src/00_getCTD.R')
+source('src/00_gethypso.R')
 source('src/functions/SpecHeat_Water.R')
 
 # Create SpecCond at 0.1 increments every 0.1 m
@@ -19,14 +19,27 @@ ctd.join = ctd |>
   group_by(date_time, year, location_name, depth.asl) |> 
   summarise_all(mean, na.rm = T) |> 
   ungroup() |> 
-  mutate(ctd_conductivity_mscm = if_else(location_name == 'West Lake Bonney' & date_time == as.Date('2002-12-16') & ctd_conductivity_mscm > 85, 
+  # remove bad data 
+  filter(!(location_name == 'West Lake Bonney' & date_time == as.Date('2002-12-16'))) |> 
+  filter(!(location_name == 'East Lake Bonney' & date_time == as.Date('2002-11-14'))) |> 
+  mutate(ctd_conductivity_mscm = if_else(location_name == 'West Lake Bonney' & date_time == as.Date('2002-11-14') & ctd_conductivity_mscm > 85, 
                                          NA, ctd_conductivity_mscm)) |> 
-  mutate(ctd_conductivity_mscm = if_else(location_name == 'West Lake Bonney' & date_time == as.Date('2002-12-16') & 
-                                           depth_m > 30 & ctd_conductivity_mscm < 77, 
+  mutate(ctd_conductivity_mscm = if_else(location_name == 'West Lake Bonney' & date_time == as.Date('2002-11-14') & 
+                                           ctd_conductivity_mscm < 75 & depth.asl <25, 
+                                           NA, ctd_conductivity_mscm)) |> 
+  mutate(ctd_conductivity_mscm = if_else(location_name == 'East Lake Bonney' & date_time == as.Date('2002-12-11') & 
+                                           ctd_conductivity_mscm > 120, 
                                          NA, ctd_conductivity_mscm)) # These are bad data points
 
 
 lakenames = c('West Lake Bonney', 'East Lake Bonney', 'Lake Fryxell','Lake Hoare')
+
+# a = ctd.join |> filter(location_name %in% c('West Lake Bonney', 'East Lake Bonney') & year %in% c(2002, 2003))
+# ggplot(a) +
+#   geom_point(aes(x = ctd_conductivity_mscm, y = depth.asl, group = as.factor(date_time), color = as.factor(date_time))) +
+#   ylab('Elevation (m asl)') + xlab('Temp (°C)') +
+#   theme_bw(base_size = 9) +
+#   facet_wrap(~location_name, scales = 'free')
 
 ########################## Create clean dataframe for lake ########################################
 
@@ -90,12 +103,12 @@ p2 = ggplot(df.clean) +
 # Check plots
 p1 + p2 + plot_layout(guides = 'collect') 
 
-
 ##################### Add SpecCond and calculate salinity ########################
 
 df.spc = df.clean |> 
   mutate(specCond.raw = ctd_conductivity_mscm/(1 + 0.020*(ctd_temp_c - 5))) |> # standardize to 5°C
-  mutate(specCond = as.character(round(specCond.raw / 0.1) * 0.1)) # round to nearest 0.5 m depth, change to character for join
+  mutate(specCond = as.character(round(specCond.raw / 0.1) * 0.1)) |>  # round to nearest 0.1 m depth, change to character for join
+  mutate(specCond = if_else(location_name == 'Lake Hoare', as.character(round(specCond.raw / 0.01) * 0.01), specCond)) # For Lake Hoare, round spC to 2 decimals
 
 # Load conductivity/salinity relationship
 # Not applicable for ELB salinity > 180
@@ -137,7 +150,6 @@ ggplot(df.spc3) +
   scale_colour_viridis_c(option = 'F', name = 'Year') +
   theme_bw(base_size = 9) +
   facet_wrap(~location_name, scales = 'free')
-
 
 ##################### Add specific heat capacity and density ########################
 # equation not build for temperatures < 0°C or S > 180, but what can you do
