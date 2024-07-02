@@ -66,8 +66,14 @@ heat.day = hypo.join %>%
 # Plot timeseries
 ggplot(heat.day) +
   geom_point(aes(x = date_time, y = heat_J), fill = 'lightblue4', shape = 21, stroke = 0.2) +
-  geom_point(aes(x = date_time, y = heatIce_J), fill = 'white', shape = 21, stroke = 0.2) +
-  facet_wrap(~location_name)
+  geom_point(aes(x = date_time, y = heat_J - heatIce_J), fill = 'white', shape = 21, stroke = 0.2) +
+  ylab('Heat storage (J)') +
+  theme_bw(base_size = 9) +
+  theme(axis.title.x = element_blank()) +
+  facet_wrap(~location_name) +
+  labs(caption = 'Blue points are lake heat content. White points are including latent heat of ice.')
+ggsave('figures/MDVlakeHeat_TimeSeries.png', width = 6, height = 4, dpi = 500)
+
 
 # profiles
 ggplot(hypo.join) +

@@ -34,9 +34,6 @@ ggplot(salinity.df) +
   xlab('Salinity (g/L)') +
   facet_wrap(~location_name, scales = 'free')
 
-
-
-
 # df.elb = salinity.df |> filter(location_name == 'East Lake Bonney')
 # m.elb <- gam(salinity/1000 ~ s(depth.asl, k = 20), data = df.elb)
 # df.elb.pred <- data.frame(depth.asl = seq(floor(min(df.elb$depth.asl)), ceiling(max(df.elb$depth.asl)), by = 0.5)) %>%

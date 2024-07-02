@@ -39,5 +39,9 @@ ggplot(df.2) +
   geom_point(aes(x = specCond, y = salinity/1000)) +
   geom_point(data = total.pred.df, aes(x = specCond, pred), col = 'red') +
   xlab('SpecCond (mS/cm)') +
-  facet_wrap(~location_name, scales = 'free')
+  ylab('Salinity (g/L)') +
+  facet_wrap(~location_name, scales = 'free') +
+  labs(caption = 'Salinities > 180 for ELB removed')
+ggsave('figures/SpC_Salinity.png', width = 6, height = 4, dpi = 500)
+ 
 
