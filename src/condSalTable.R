@@ -12,7 +12,9 @@ ggplot(salinity.df) +
   facet_wrap(~location_name, scales = 'free')
 
 df.2 = salinity.df |> select(location_name, depth.asl, depth_m:ctd_conductivity_mscm, specCond, salinity) |> 
-  filter(salinity/1000 <= 180)
+  filter(salinity/1000 <= 180) |> 
+  mutate(location_name = factor(location_name, levels = c('Lake Fryxell','Lake Hoare', 'East Lake Bonney', 'West Lake Bonney')))
+
 
 lakenames = c('West Lake Bonney', 'East Lake Bonney', 'Lake Fryxell','Lake Hoare')
 k.by = c(3,5,3,3)
@@ -30,18 +32,23 @@ for (l in 1:4) {
 }
 
 total.pred.df = as_tibble(bind_rows(total.pred)) |> 
-  mutate(pred = as.numeric(pred))
+  mutate(pred = as.numeric(pred)) |> 
+  mutate(location_name = factor(location_name, levels = c('Lake Fryxell','Lake Hoare', 'East Lake Bonney', 'West Lake Bonney')))
 write_csv(total.pred.df, 'dataout/condSalTransfer.csv')
 
 # Plot to check any wonkiness
 ggplot(df.2) +
   # geom_path(aes(x = specCond, y = salinity/1000)) +
-  geom_point(aes(x = specCond, y = salinity/1000)) +
-  geom_point(data = total.pred.df, aes(x = specCond, pred), col = 'red') +
+  geom_point(aes(x = specCond, y = salinity/1000, fill = location_name), shape = 21, stroke = 0.2) +
+  geom_point(data = total.pred.df, aes(x = specCond, pred), col = 'grey30', size = 0.6) +
+  scale_fill_manual(values = c('#4477c9', '#e3dc10', '#b34f0c', '#4c944a'), name = 'Lake') +
   xlab('SpecCond (mS/cm)') +
   ylab('Salinity (g/L)') +
-  facet_wrap(~location_name, scales = 'free') +
-  labs(caption = 'Salinities > 180 for ELB removed')
-ggsave('figures/SpC_Salinity.png', width = 6, height = 4, dpi = 500)
+  theme_bw(base_size = 9) +
+  facet_wrap(~location_name, scales = 'free', nrow = 1) +
+  theme(legend.position = 'none')
+  # labs(caption = 'Salinities > 180 for ELB removed') 
+
+ggsave('figures/SI_SpC_Salinity.png', width = 6, height = 2, dpi = 500)
  
 

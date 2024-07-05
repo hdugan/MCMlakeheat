@@ -8,6 +8,7 @@ library(wql)
 
 # source lake lakels
 source('src/00_getLakeLevels.R')
+source('src/00_getDensity.R')
 # source DIC function 
 source('https://raw.githubusercontent.com/hdugan/lake_DIC/master/lake_DIC.R')
 
@@ -128,7 +129,6 @@ ggplot(salinity.df) +
   geom_point(aes(x = salinity/1000, y = depth.asl, group = date_time, col = year(date_time))) +
   # geom_path(aes(x = salinity.derivedCond, y = depth.asl, group = date_time), col = 'red') +
   # scale_y_reverse() +
-  geom_point(data = df.pred.salinty, aes(x = pred, depth.asl), col = 'red') +
   xlab('Salinity (g/L)') +
   facet_wrap(~location_name, scales = 'free')
 

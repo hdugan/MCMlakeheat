@@ -161,4 +161,6 @@ df.spcH = df.spc3 |>
 quantile(df.spcH$spHeat_J_kgK)
 quantile(df.spcH$density_kg_m3)
 
+# Check Range
+df.spcH |> group_by(location_name) |> summarise(min(spHeat_J_kgK, na.rm = T), max(spHeat_J_kgK, na.rm = T))
 

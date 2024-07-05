@@ -55,3 +55,5 @@ plotCTD('West Lake Bonney')
 
 # ggsave('figures/ctdprofiles.png', width = 6, height = 12, dpi = 500)  
 
+### Get maximum depths
+ctd |> group_by(location_name) |> summarise(max(depth_m, na.rm = T))
