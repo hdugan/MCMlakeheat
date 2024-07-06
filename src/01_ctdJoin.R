@@ -61,7 +61,7 @@ clean.ctd <- function(lakename) {
       mutate(ctd_temp_c = if_else(row_number() == 1 & is.na(ctd_temp_c), 0, ctd_temp_c)) |> 
       mutate(depth.asl.char = as.character(depth.asl)) # joining by numbers impossible with decimal places
     
-    df.lake.list[[usedate]] = expand_grid(depth.asl.char = as.character(seq(max(df.lake$depth.asl, na.rm = T), min(df.lake$depth.asl, na.rm = T), by = -0.1))) |> 
+    df.lake.list[[usedate]] = expand_grid(depth.asl.char = as.character(round(seq(max(df.lake$depth.asl, na.rm = T), min(df.lake$depth.asl, na.rm = T), by = -0.1),1))) |> 
       left_join(df.lake, join_by(depth.asl.char)) |> 
       mutate(date_time = usedate) |> 
       mutate(year = year(usedate)) |> 

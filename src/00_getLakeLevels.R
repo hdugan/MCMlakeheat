@@ -28,19 +28,20 @@ ll.interp = expand_grid(date_time = seq.Date(as.Date('1991-01-26'), as.Date('202
   mutate(location_name = case_when(lake == 'Lake Fryxell' ~ 'Lake Fryxell', 
                                    lake == 'Lake Hoare' ~ 'Lake Hoare', 
                                    lake == 'Lake Bonney' ~ 'East Lake Bonney')) %>% 
-  bind_rows(. |> filter(lake == 'Lake Bonney') |> mutate(location_name = 'West Lake Bonney'))
-
+  bind_rows(. |> filter(lake == 'Lake Bonney') |> mutate(location_name = 'West Lake Bonney')) |> 
+  mutate(lake = factor(lake, levels = c('Lake Fryxell','Lake Hoare', 'Lake Bonney')))
 
 
 # Graph with linear interpolation
 ggplot(ll.interp) +
   geom_path(aes(x = date_time, y = masl.approx), col = 'lightblue4') +
-  geom_point(aes(x = date_time, y = masl, fill = location_name), shape = 21, stroke = 0.2) +
-  scale_fill_manual(values = c('#4477c9', '#e3dc10', '#b34f0c', '#4c944a'), name = 'Lake') +
+  geom_point(aes(x = date_time, y = masl, fill = lake), shape = 21, stroke = 0.2) +
+  scale_fill_manual(values = c('#4477c9', '#e3dc10', '#b34f0c'), name = 'Lake') +
   facet_wrap(~lake, scales = 'free', nrow = 3) +
   ylab('Lake Level (m asl)') +
   theme_bw(base_size = 9) +
-  theme(axis.title.x = element_blank())
+  theme(axis.title.x = element_blank(), 
+        legend.position = 'none')
 
 ggsave('figures/SI_lakelevel.png', width = 6, height = 4, dpi = 500)
 

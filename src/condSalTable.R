@@ -42,11 +42,13 @@ ggplot(df.2) +
   geom_point(aes(x = specCond, y = salinity/1000, fill = location_name), shape = 21, stroke = 0.2) +
   geom_point(data = total.pred.df, aes(x = specCond, pred), col = 'grey30', size = 0.6) +
   scale_fill_manual(values = c('#4477c9', '#e3dc10', '#b34f0c', '#4c944a'), name = 'Lake') +
-  xlab('SpecCond (mS/cm)') +
-  ylab('Salinity (g/L)') +
+  xlab('SpecCond (mS cm^-1 )') +
+  ylab('Salinity (g L^-1 )') +
   theme_bw(base_size = 9) +
   facet_wrap(~location_name, scales = 'free', nrow = 1) +
-  theme(legend.position = 'none')
+  theme(legend.position = 'none', 
+        axis.title.x = element_markdown(),
+        axis.title.y = element_markdown())
   # labs(caption = 'Salinities > 180 for ELB removed') 
 
 ggsave('figures/SI_SpC_Salinity.png', width = 6, height = 2, dpi = 500)
