@@ -161,9 +161,9 @@ heat.day = hypo.join |>
   filter(depth.asl >= cutoffDepth) |> 
   summarise(heat_J = sum(heat_J, na.rm = T), heatIce_J = sum(heatIce_J, na.rm = T), 
             Area_2D = first(Area_2D)) |> 
-  mutate(heatTot_J_m2 = (heat_J - heatIce_J)/Area_2D)
-
-
+  mutate(heatTot_J_m2 = (heat_J - heatIce_J)/Area_2D) |> 
+  ungroup() |> 
+  mutate(location_name = factor(location_name, levels = c('Lake Fryxell','Lake Hoare', 'East Lake Bonney', 'West Lake Bonney')))
 
 # % of ice heat
 heat.day |> mutate(icep = 100*heatIce_J/heat_J) |> 
