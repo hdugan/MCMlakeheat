@@ -5,6 +5,7 @@ library(patchwork)
 library(scico)
 library(ggtext)
 
+# Run 01 first 
 source('src/00_gethypso.R')
 source('src/00_getIceThickness.R')
 
@@ -190,6 +191,9 @@ ggplot(heat.day) +
   # facet_wrap(~location_name) 
 
 ggsave('figures/Fig2_Heat_TimeSeries.png', width = 4, height = 2.5, dpi = 500)
+
+# Output heat data. 
+write_csv(heat.day, 'dataout/MDVLakes_dailyHeatStorage.csv')
 
  # # profiles
 # ggplot(hypo.join) +
