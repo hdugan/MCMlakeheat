@@ -6,6 +6,7 @@ library(scico)
 library(ggtext)
 
 source('src/00_gethypso.R')
+source('src/00_getIceThickness.R')
 
 ##################### Add lake ice thickness ########################
 df.full.ice = df.spcH |> 
