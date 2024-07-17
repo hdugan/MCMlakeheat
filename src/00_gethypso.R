@@ -41,6 +41,19 @@ hypo_new = read_csv('datain/hypsometry_lidar.csv') |>
                                    lake == 'ELB' ~ 'East Lake Bonney', 
                                    lake == 'WLB' ~ 'West Lake Bonney')) 
  
+
+lake.volume = ll.interp |> ungroup() |> 
+  select(-lake) |> 
+  filter(!is.na(masl))  |> 
+  mutate(masl = as.character(round(masl,1))) |> 
+  left_join(hypo_new |> mutate(Elevation_masl = as.character(round(Elevation_masl,1))), 
+            by = c('masl' = 'Elevation_masl', 'location_name')) |> 
+  select(-masl.approx, -lake, -vol_layer_m3)
+
+
+# ggplot(lake.volume) +
+#   geom_point(aes(x = date_time, y = cum_vol_m3, col = location_name))
+# 
 # ggplot(hypo_new) +
 #   geom_point(aes(x = Volume, y = Elevation_masl, col = lake))
 # 
