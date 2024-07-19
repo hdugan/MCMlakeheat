@@ -16,12 +16,13 @@ heat.day |> mutate(icep = 100*heatIce_J/heat_J) |>
 
 ## If all water was 1°C
 hypo.thetical = hypo.fill |>
-  mutate(ctd_temp_c = 1, sal.pred2 = 1) |> 
-  filter(!is.na(ctd_temp_c), !is.na(depth_m)) |> 
+  mutate(ctd_temp_c = if_else(!is.na(ctd_temp_c), 5, ctd_temp_c)) |> 
+  mutate(tempUse = if_else(!is.na(tempUse), 5, tempUse)) |> 
+  filter(!is.na(depth_m)) |>
   mutate(spHeat_J_kgK = SW_SpcHeat(Temp = ctd_temp_c, S = sal.pred2, P = 1 + (depth_m/10))) |> #units deafult, °C, ppt, bar
   mutate(density_kg_m3 = sw_dens(S = sal.pred2, t = ctd_temp_c, p = 1 + (depth_m/10))) |> 
-  mutate(temp_K = 1 + 273.15) %>% 
-  mutate(spHeat_J_m3K = spHeat_J_kgK * 1000) %>% 
+  mutate(temp_K = tempUse + 273.15) %>% 
+  mutate(spHeat_J_m3K = spHeat_J_kgK * density_kg_m3) %>% 
   # latent heat of ice = density * thickness *  latent heat of ice (334000 J/kg)
   mutate(LHice_J_m3 = iceDensity_kgm3 * 334000) |> 
   mutate(heatIce_J = LHice_J_m3 * vol_layer_m3) |> 

@@ -169,22 +169,22 @@ fill.gaps.LH = expand.grid(location_name = 'Lake Hoare',
   left_join(hypo.join) |> 
   mutate(depth.asl = as.numeric(depth.asl.char)) |> 
   mutate(tempUse = if_else(is.na(tempUse) &
-                              depth.asl <= 58, 0.223, tempUse)) |> 
+                              depth.asl < 58, 0.223, tempUse)) |> 
   mutate(heat_J_m2 = if_else(is.na(heat_J_m2) &
-                               depth.asl <= 58, 114905039, heat_J_m2)) |> 
+                               depth.asl < 58, 114905039, heat_J_m2)) |> 
   mutate(heat_J = if_else(is.na(heat_J) &
-                            depth.asl <= 58, heat_J_m2*Area_2D, heat_J)) 
+                            depth.asl < 58, heat_J_m2*Area_2D, heat_J)) 
 
 # Take new extrapolated Lake Hoare dataframe and join to other lakes
 # Add cutoff depth to align bottom of most profiles
 hypo.fill = hypo.join |> 
-  filter(location_name != 'Lake Hoare') |> 
-  bind_rows(fill.gaps.LH) |> 
+  # filter(location_name != 'Lake Hoare') |> 
+  # bind_rows(fill.gaps.LH) |> 
   group_by(location_name, date_time) %>% 
   arrange(location_name, date_time, desc(depth.asl)) |> 
   mutate(cutoffDepth = case_when(location_name == 'East Lake Bonney' ~ 25,
                                  location_name == 'West Lake Bonney' ~ 25,
                                  location_name == 'Lake Fryxell' ~ 2.5,
-                                 location_name == 'Lake Hoare' ~ 48)) |> 
+                                 location_name == 'Lake Hoare' ~ 58)) |> 
   filter(depth.asl >= cutoffDepth) 
 
