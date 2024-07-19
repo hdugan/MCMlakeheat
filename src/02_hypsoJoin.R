@@ -6,8 +6,6 @@ library(scico)
 library(ggtext)
 
 # Run 01 first 
-source('src/00_gethypso.R')
-source('src/00_getIceThickness.R')
 
 ##################### Add lake ice thickness ########################
 df.full.ice = df.spcH |> 
@@ -96,7 +94,9 @@ hypo.join = df.full.ice |>
 
 ##################### Plot heat maps #####################
 makeHeat <- function(name, filllimits = c(NA,NA)) {
-  ggplot(hypo.join %>% filter(location_name == name)) + 
+  ggplot(hypo.join %>% 
+           filter(month(date_time) %in% c(11,12,1)) |> 
+           filter(location_name == name)) + 
     geom_tile(aes(x = date_time, y = depth.asl, fill = heat_J_m2/1e6), width = 150,height = 0.1) +
     geom_tile(data = hypo.join %>% filter(location_name == name & isIce),
               aes(x = date_time, y = depth.asl), fill = 'grey80', width = 150, height = 0.1) +
@@ -117,7 +117,6 @@ h4 = makeHeat('West Lake Bonney', filllimits = c(114.5,117)) + ylim(45, NA)
 h1 + h2 + h3 + h4 + plot_layout(guides = 'collect')
 ggsave('figures/Fig3_HeatContent_epi.png', width = 6, height = 4, dpi = 500)
 
-
 h1 = makeHeat('Lake Fryxell')
 h2 = makeHeat('Lake Hoare')
 h3 = makeHeat('East Lake Bonney')
@@ -126,24 +125,51 @@ h4 = makeHeat('West Lake Bonney')
 h1 + h2 + h3 + h4
 ggsave('figures/SI_HeatContent_full.png', width = 6, height = 4, dpi = 500)
 
+makeTemp <- function(name, filllimits = c(NA,NA)) {
+  ggplot(hypo.join %>% 
+           filter(month(date_time) %in% c(11,12,1)) |> 
+           filter(location_name == name)) + 
+    geom_tile(aes(x = date_time, y = depth.asl, fill = ctd_temp_c), width = 150,height = 0.1) +
+    geom_tile(data = hypo.join %>% filter(location_name == name & isIce),
+              aes(x = date_time, y = depth.asl), fill = 'grey80', width = 150, height = 0.1) +
+    scale_fill_scico(palette = 'roma', direction = -1, name = 'Temp (°C)', limits = filllimits, na.value = 'black') +
+    labs(title = name) +
+    ylab('Depth asl (m)') +
+    theme_bw(base_size = 9) +
+    theme(axis.title.x = element_blank(),
+          legend.text = element_text(size = 7),
+          legend.key.width = unit(0.2,'cm'))
+}
+h1 = makeTemp('Lake Fryxell')
+h2 = makeTemp('Lake Hoare')
+h3 = makeTemp('East Lake Bonney')
+h4 = makeTemp('West Lake Bonney')
+
+h1 + h2 + h3 + h4
+ggsave('figures/SI_CTD_Temp.png', width = 6, height = 4, dpi = 500)
+
 ##################### Create daily totals #####################
 hypo.join |> filter(location_name == "Lake Hoare") |> 
   filter(depth.asl <= 55 & depth.asl >= 48) |> 
-  select(heat_J, heat_J_m2) |> 
-  summarise(mean(heat_J_m2), min(heat_J_m2), max(heat_J_m2))
+  select(heat_J, heat_J_m2, tempUse) |> 
+  summarise(mean(heat_J_m2), min(heat_J_m2), max(heat_J_m2), 
+            mean(tempUse), min(tempUse), max(tempUse))
 # For Lake Hoare, Heat J/m2 between 50-55 m ~ 114.9 MJ/m2
+# For Lake Hoare, temp °C between 50-55 m ~ 0.223 °C
 
 # Problem is not all casts go deep enough, specifically for Lake Hoare
 hoare.dates = hypo.join |> filter(location_name == "Lake Hoare") |> 
   group_by(date_time) |> summarise_all(first) |> pull(date_time)
 
-heat.day.LH = expand.grid(location_name = 'Lake Hoare',
+fill.gaps.LH = expand.grid(location_name = 'Lake Hoare',
                        date_time = hoare.dates,
                        depth.asl.char = as.character(round(seq(48,75, by = 0.1),1))) |> 
   left_join(hypo.use, by = join_by(depth.asl.char, location_name)) |> 
   arrange(location_name, date_time, desc(depth.asl.char)) |> 
   left_join(hypo.join) |> 
   mutate(depth.asl = as.numeric(depth.asl.char)) |> 
+  mutate(tempUse = if_else(is.na(tempUse) &
+                              depth.asl <= 58, 0.223, tempUse)) |> 
   mutate(heat_J_m2 = if_else(is.na(heat_J_m2) &
                                depth.asl <= 58, 114905039, heat_J_m2)) |> 
   mutate(heat_J = if_else(is.na(heat_J) &
@@ -151,52 +177,14 @@ heat.day.LH = expand.grid(location_name = 'Lake Hoare',
 
 # Take new extrapolated Lake Hoare dataframe and join to other lakes
 # Add cutoff depth to align bottom of most profiles
-heat.day = hypo.join |> 
+hypo.fill = hypo.join |> 
   filter(location_name != 'Lake Hoare') |> 
-  bind_rows(heat.day.LH) |> 
+  bind_rows(fill.gaps.LH) |> 
   group_by(location_name, date_time) %>% 
   arrange(location_name, date_time, desc(depth.asl)) |> 
   mutate(cutoffDepth = case_when(location_name == 'East Lake Bonney' ~ 25,
                                  location_name == 'West Lake Bonney' ~ 25,
                                  location_name == 'Lake Fryxell' ~ 2.5,
                                  location_name == 'Lake Hoare' ~ 48)) |> 
-  filter(depth.asl >= cutoffDepth) |> 
-  summarise(heat_J = sum(heat_J, na.rm = T), heatIce_J = sum(heatIce_J, na.rm = T), 
-            Area_2D = first(Area_2D)) |> 
-  mutate(heatTot_J_m2 = (heat_J - heatIce_J)/Area_2D) |> 
-  ungroup() |> 
-  mutate(location_name = factor(location_name, levels = c('Lake Fryxell','Lake Hoare', 'East Lake Bonney', 'West Lake Bonney')))
-
-# % of ice heat
-heat.day |> mutate(icep = 100*heatIce_J/heat_J) |> 
-  group_by(location_name) |> 
-  summarise(mean(icep, na.rm = T))
-
-######### Plot timeseries ##########
-ggplot(heat.day) +
-  geom_smooth(aes(x = date_time, y = heatTot_J_m2/1e6, color = location_name), method = 'gam') +
-  # geom_point(aes(x = date_time, y = heat_J/Area_2D/1e9, fill = location_name), shape = 21, stroke = 0.2, alpha = 0.2) +
-  geom_point(aes(x = date_time, y = heatTot_J_m2/1e6, fill = location_name), shape = 21, stroke = 0.2) +
-  scale_color_manual(values = c('#4477c9', '#e3dc10', '#b34f0c', '#4c944a'), name = 'Lake') +
-  scale_fill_manual(values = c('#4477c9', '#e3dc10', '#b34f0c', '#4c944a'), name = 'Lake') +
-  ylab('Heat storage (MJ m^2 )') +
-  theme_bw(base_size = 9) +
-  theme(axis.title.x = element_blank(),
-        axis.title.y = element_markdown(),
-        legend.position = 'bottom',
-        legend.title = element_blank(),
-        legend.text = element_text(size = 7),
-        legend.key.size = unit(0.2,'cm'),
-        legend.margin = margin(0, 0, 0, 0))
-  # facet_wrap(~location_name) 
-
-ggsave('figures/Fig2_Heat_TimeSeries.png', width = 4, height = 2.5, dpi = 500)
-
-# Output heat data. 
-write_csv(heat.day, 'dataout/MDVLakes_dailyHeatStorage.csv')
-
- # # profiles
-# ggplot(hypo.join) +
-#   geom_point(aes(x = heat_J_m2 , y = depth.asl)) +
-#   facet_wrap(~location_name, scales = 'free')
+  filter(depth.asl >= cutoffDepth) 
 

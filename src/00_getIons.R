@@ -112,7 +112,7 @@ salinity.df = full.df |>
   mutate(specCond = ctd_conductivity_mscm/(1 + 0.020*(ctd_temp_c - 5))) |> 
   mutate(salinity.derivedCond = convert_RtoS(R = ctd_conductivity_mscm/42.914, t = ctd_temp_c, P = 1 + (depth_m/10))) |> 
   mutate(salinity.derivedCond2 = ec2pss(ctd_conductivity_mscm, t = ctd_temp_c, p = 1 + depth_m)) |> 
-  left_join(ll.interp |> select(-lake, -masl), by = join_by(location_name, date_time)) |> 
+  left_join(ll.interp |> select(-masl), by = join_by(location_name, date_time)) |> 
   mutate(depth.asl = masl.approx - depth_m)
   
 # C(35, 15, 0) is the conductivity of standard seawater (35‰) at 15 °C which by
@@ -161,5 +161,6 @@ ggplot(salinity.df |> filter(year(date_time) == 2019)) +
   scale_y_reverse() +
   xlab('Density (g/m3)') +
   facet_wrap(~location_name, scales = 'free')
+
 
          

@@ -23,7 +23,7 @@ ctd <- read_csv(infile1) |>
                           location_name == 'East Lake Bonney' ~ 'Lake Bonney', 
                           location_name == 'West Lake Bonney' ~ 'Lake Bonney')) |> 
   filter(lake %in% c('Lake Bonney', 'Lake Fryxell','Lake Hoare')) |> 
-  left_join(ll.interp, by = join_by(lake, date_time, location_name)) |>  # Join by masl 
+  left_join(ll.interp, by = join_by(location_name, date_time)) |>  # Join by masl 
   mutate(depth.asl = masl.approx - depth_m)
   
 #### plot functions ######
