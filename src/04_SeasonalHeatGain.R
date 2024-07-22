@@ -99,13 +99,13 @@ wi |> filter(daydiff >= 290) |>
 wi |> filter(tempdiff < -0.25, location_name == 'East Lake Bonney')
 
 
-# ggplot(frx1) +
+# ggplot(cast.df) +
 #   geom_path(aes(x = tempUse, y = depth.asl, group = date_time, color = factor(month(date_time)))) +
 #   ylab('Elevation (m asl)') + xlab('Temperature (°C)') +
 #   scale_color_manual(values = c('lightblue3','orange','red3','green4')) +
 #   theme_bw(base_size = 9) +
 #   facet_wrap(~wyear)
-# 
+ 
 # ggplot(frx1) +
 #   geom_path(aes(x = tempUse, y = depth.asl, group = date_time, color = factor(month(date_time)))) +
 #   ylab('Elevation (m asl)') + xlab('Temperature (°C)') +
