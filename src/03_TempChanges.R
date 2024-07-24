@@ -3,8 +3,9 @@
 
 # Summarise by day 
 heat.day = hypo.fill |> 
-  summarise(heat_J = sum(heat_J, na.rm = T), heatIce_J = sum(heatIce_J, na.rm = T), 
-            Area_2D = first(Area_2D)) |> 
+  mutate(tempV = tempUse * vol_layer_m3) |> 
+  summarise(ice.approx = mean(ice.approx, na.rm = T), heat_J = sum(heat_J, na.rm = T), heatIce_J = sum(heatIce_J, na.rm = T), 
+            Area_2D = first(Area_2D), vol = sum(volUse, na.rm = T), tempV = sum(tempV, na.rm = T)/vol) |> 
   mutate(heatTot_J_m2 = (heat_J - heatIce_J)/Area_2D) |> 
   ungroup() |> 
   mutate(location_name = factor(location_name, levels = c('Lake Fryxell','Lake Hoare', 'East Lake Bonney', 'West Lake Bonney')))
@@ -37,10 +38,9 @@ hypo.thetical = hypo.fill |>
 ggplot(heat.day) +
   geom_smooth(aes(x = date_time, y = heatTot_J_m2/1e6, color = location_name), method = 'gam') +
   geom_point(aes(x = date_time, y = heatTot_J_m2/1e6, fill = location_name), shape = 21, stroke = 0.2) +
-  
-  geom_smooth(data = hypo.thetical, aes(x = date_time, y = heatTot_J_m2/1e6, group = location_name), color = 'grey70', method = 'gam', alpha = 0.5) +
-  geom_point(data = hypo.thetical, aes(x = date_time, y = heatTot_J_m2/1e6, fill = location_name), shape = 21, stroke = 0.2, alpha = 0.5) +
-  
+  # geom_smooth(data = hypo.thetical, aes(x = date_time, y = heatTot_J_m2/1e6, group = location_name), color = 'grey70', method = 'gam', alpha = 0.5) +
+  # geom_point(data = hypo.thetical, aes(x = date_time, y = heatTot_J_m2/1e6, fill = location_name), shape = 21, stroke = 0.2, alpha = 0.5) +
+  # 
   scale_color_manual(values = c('#4477c9', '#e3dc10', '#b34f0c', '#4c944a'), name = 'Lake') +
   scale_fill_manual(values = c('#4477c9', '#e3dc10', '#b34f0c', '#4c944a'), name = 'Lake') +
   ylab('Heat storage (MJ m^2 )') +
@@ -59,22 +59,94 @@ ggsave('figures/Fig2_Heat_TimeSeries.png', width = 4, height = 2.5, dpi = 500)
 # Output heat data. 
 write_csv(heat.day, 'dataout/MDVLakes_dailyHeatStorage.csv')
 
-meanTemp = hypo.fill |> 
-  filter(month(date_time) %in% c(11,12,1)) |> 
-  mutate(tempV = tempUse * vol_layer_m3) |> 
-  group_by(location_name, date_time) |> 
-  arrange(location_name, date_time, desc(depth.asl)) |> 
-  summarise(vol = first(cum_vol_m3), tempV = sum(tempV, na.rm = T)/vol, ice.approx = mean(ice.approx, na.rm = T), 
-            heat_J = sum(heat_J, na.rm = T), heatIce_J = sum(heatIce_J, na.rm = T), 
-                      Area_2D = first(Area_2D))
-
-ggplot(meanTemp) +
-  geom_path(aes(x = date_time, y = tempV)) +
-  geom_point(aes(x = date_time, y = tempV)) +
-  geom_path(aes(x = date_time, y = (heat_J - heatIce_J)/1e16), col = 'red3') +
-  geom_point(aes(x = date_time, y = (heat_J - heatIce_J)/1e16), col = 'red3') +
-  geom_path(aes(x = date_time, y = -ice.approx), col = 'lightblue2') +
-  geom_point(aes(x = date_time, y = -ice.approx), col = 'lightblue2') +
+############ Timeseries plot of heat vs vol, ice, and mean temp ############
+cols <- c("temp" = "black","heat" = "red3","ice" = "lightblue4","vol" = 'gold')
+ggplot(heat.day) +
+  geom_smooth(aes(x = date_time, y = tempV, col = 'temp')) +
+  geom_point(aes(x = date_time, y = tempV, col = 'temp')) +
+  geom_smooth(aes(x = date_time, y = (heat_J - heatIce_J)/1e16, col = 'heat')) +
+  geom_point(aes(x = date_time, y = (heat_J - heatIce_J)/1e16, col = 'heat')) +
+  geom_smooth(aes(x = date_time, y = -ice.approx, col = 'ice')) +
+  geom_point(aes(x = date_time, y = -ice.approx, col = 'ice')) +
+  geom_smooth(aes(x = date_time, y = vol/1e7, col = 'vol')) +
+  geom_point(aes(x = date_time, y = vol/1e7, col = 'vol')) +
+  scale_colour_manual(values = cols) +
+  ylab('Temp and Ice thickness, ignore heat/vol units') +
   facet_wrap(~location_name) +
-  theme_bw()
+  theme_bw(base_size = 9) +
+  theme(axis.title.x = element_blank())
+ggsave('figures/SI_TimeSeries.png', width = 6, height = 6, dpi = 500)
 
+########### Annual change ##############
+# Find case date that minimizes RMSE of days between casts 
+expand_grid(location_name = c('Lake Fryxell', 'Lake Hoare', 'East Lake Bonney', 'West Lake Bonney'), useday = 1:30, usemonth = c(11,12)) |> 
+  rowwise() %>%
+  mutate(day.rmse = getBestCastDay(heat.day, location_name, useday, usemonth)) |> 
+  arrange(day.rmse) |> 
+  ungroup() |> 
+  group_by(location_name) |> 
+  slice(1)
+
+LF.date = yday(as.Date('2001-12-09'))
+LH.date = yday(as.Date('2001-12-12'))
+ELB.date = yday(as.Date('2001-12-14'))
+WLB.date = yday(as.Date('2001-12-24'))
+
+
+# pull that cast 
+annual.df = pullBestCastDay(heat.day, 'Lake Fryxell', 9, 12) |> 
+  bind_rows(pullBestCastDay(heat.day, 'Lake Hoare', 12, 12)) |> 
+  bind_rows(pullBestCastDay(heat.day, 'East Lake Bonney', 14, 12)) |> 
+  bind_rows(pullBestCastDay(heat.day, 'West Lake Bonney', 24, 12)) |> 
+  mutate(deltaVol = c(NA, diff(vol)), deltatempV = c(NA, diff(tempV)), deltaIce = c(NA, -diff(ice.approx)))
+
+ggplot(annual.df) +
+  geom_point(aes(x = deltaIce, y = deltatempV)) + 
+  facet_wrap(~location_name) +
+  theme_bw(base_size = 9) +
+  theme(axis.title.x = element_blank())
+  
+
+# pull that cast 
+annual.df = pullBestCastDay(heat.day, 'Lake Fryxell', 1, 11) |> 
+  bind_rows(pullBestCastDay(heat.day, 'Lake Hoare', 1, 11)) |> 
+  bind_rows(pullBestCastDay(heat.day, 'East Lake Bonney', 1, 11)) |> 
+  bind_rows(pullBestCastDay(heat.day, 'West Lake Bonney', 1, 11)) |> 
+  mutate(deltaVol = c(NA, diff(vol)), deltatempV = c(NA, diff(tempV)), 
+         deltaIce = c(NA, -diff(ice.approx)), deltaHeatTot = c(NA, diff(heatTot_J_m2)))
+
+p1 = ggplot(annual.df) +
+  geom_hline(aes(yintercept = 0), linetype = 2) +
+  geom_vline(aes(xintercept = 0), linetype = 2) +
+  geom_point(aes(x = deltaVol/1e6, y = deltatempV, fill = location_name), shape = 21, stroke = 0.2) + 
+  scale_color_manual(values = c('#4477c9', '#e3dc10', '#b34f0c', '#4c944a'), name = 'Lake') +
+  scale_fill_manual(values = c('#4477c9', '#e3dc10', '#b34f0c', '#4c944a'), name = 'Lake') +
+  ylab('Annual change mean temp') + xlab('Annual change volume (x1e6)') +
+  facet_wrap(~location_name, scales = 'free', nrow = 1) +
+  theme_bw(base_size = 9) +
+  theme(legend.position = 'none')
+
+p2 = ggplot(annual.df) +
+  geom_hline(aes(yintercept = 0), linetype = 2) +
+  geom_vline(aes(xintercept = 0), linetype = 2) +
+  geom_point(aes(x = deltaIce, y = deltatempV, fill = location_name), shape = 21, stroke = 0.2) + 
+  scale_color_manual(values = c('#4477c9', '#e3dc10', '#b34f0c', '#4c944a'), name = 'Lake') +
+  scale_fill_manual(values = c('#4477c9', '#e3dc10', '#b34f0c', '#4c944a'), name = 'Lake') +
+  ylab('Annual change mean temp') + xlab('Annual change ice thickness') +
+  facet_wrap(~location_name, scales = 'free', nrow = 1) +
+  theme_bw(base_size = 9) +
+  theme(legend.position = 'none')
+
+ggplot(annual.df) +
+  geom_hline(aes(yintercept = 0), linetype = 2) +
+  geom_vline(aes(xintercept = 0), linetype = 2) +
+  geom_point(aes(x = ice.approx, y = deltatempV, fill = location_name), shape = 21, stroke = 0.2) + 
+  scale_color_manual(values = c('#4477c9', '#e3dc10', '#b34f0c', '#4c944a'), name = 'Lake') +
+  scale_fill_manual(values = c('#4477c9', '#e3dc10', '#b34f0c', '#4c944a'), name = 'Lake') +
+  ylab('Annual change mean temp') + xlab('Annual change ice thickness') +
+  facet_wrap(~location_name, scales = 'free', nrow = 1) +
+  theme_bw(base_size = 9) +
+  theme(legend.position = 'none')
+
+p1/p2
+ggsave('figures/SI_Deltas.png', width = 6, height = 6, dpi = 500)

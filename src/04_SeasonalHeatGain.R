@@ -11,6 +11,17 @@ ggplot(df.full.ice |> filter(location_name == 'Lake Fryxell', date_time >= as.Da
   theme_bw(base_size = 9) +
   facet_wrap(~location_name, scales = 'free', ncol = 1)
 
+# Check plot - temperature
+ggplot(df.full.ice |> filter(location_name == 'East Lake Bonney', date_time >= as.Date('2022-10-01'))) +
+  geom_rect(data = icebox |> filter(location_name == 'East Lake Bonney', date_time >= as.Date('2022-10-01')),
+            aes(xmin = ctd_temp_c, xmax = ctd_temp_c, ymin = max.depth, ymax = min.depth, group = date_time), 
+            color = 'grey50',size = 0.3) +
+  geom_path(aes(x = tempUse, y = depth.asl, group = date_time, color = as.factor(date_time))) +
+  ylab('Elevation (m asl)') + xlab('Temperature (°C)') +
+  scale_colour_viridis_d(option = 'F') +
+  theme_bw(base_size = 9) +
+  facet_wrap(~location_name, scales = 'free', ncol = 1)
+
 
 ################## Heat gain in the summer ##################
 cast.df = hypo.fill |> #filter(location_name == 'Lake Fryxell') |> 
@@ -26,7 +37,7 @@ cast.df = hypo.fill |> #filter(location_name == 'Lake Fryxell') |>
 wy = cast.df |> 
   group_by(location_name, wyear, date_time, cast) |> 
   arrange(location_name, date_time, desc(depth.asl)) |> 
-  summarise(vol = first(cum_vol_m3), tempV = sum(tempV, na.rm = T)/vol, ice.approx = mean(ice.approx, na.rm = T), 
+  summarise(vol = sum(volUse, na.rm = T), tempV = sum(tempV, na.rm = T)/vol, ice.approx = mean(ice.approx, na.rm = T), 
             heat_J = sum(heat_J, na.rm = T), heatIce_J = sum(heatIce_J, na.rm = T), 
             Area_2D = first(Area_2D)) |> 
   group_by(location_name, wyear) |> 
@@ -50,7 +61,6 @@ wy |> filter(daydiff >= 30 & daydiff <=60) |>
   theme_bw() +
   facet_wrap(~location_name)
 
-
 # Ice thickness vs heat gain
 wy |> filter(daydiff >= 30 & daydiff <=60) |>
   select(location_name, wyear, daydiff, tempV, ice.approx, cast) |> 
@@ -73,7 +83,7 @@ wi = cast.df |>
   mutate(iyear = if_else(yday(date_time) >= 333, year +1, year)) |> 
   group_by(location_name, iyear, date_time, cast) |> 
   arrange(location_name, date_time, desc(depth.asl)) |> 
-  summarise(vol = first(cum_vol_m3), tempV = sum(tempV, na.rm = T)/vol, ice.approx = mean(ice.approx, na.rm = T), 
+  summarise(vol = sum(volUse, na.rm = T), tempV = sum(tempV, na.rm = T)/vol, ice.approx = mean(ice.approx, na.rm = T), 
             heat_J = sum(heat_J, na.rm = T), heatIce_J = sum(heatIce_J, na.rm = T), 
             Area_2D = first(Area_2D)) |> 
   group_by(location_name, iyear) |> 

@@ -59,6 +59,19 @@ ct1 + ct2 + plot_layout(guides = 'collect') +
         legend.margin = margin(0, 0, 0, 0))
 ggsave('figures/Fig1_CTD.png', width = 6, height = 6, dpi = 500)
 
+
+# Check plot - temperature
+ggplot(df.full.ice |> dplyr::filter(location_name %in% c('East Lake Bonney', 'West Lake Bonney'))) +
+  geom_rect(data = icebox |> dplyr::filter(location_name %in% c('East Lake Bonney', 'West Lake Bonney')),
+            aes(xmin = ctd_temp_c, xmax = ctd_temp_c, ymin = max.depth, ymax = min.depth, group = year(date_time)), 
+            color = 'grey50',size = 0.3) +
+  geom_path(aes(x = tempUse, y = depth.asl, group = date_time, color = year(date_time))) +
+  ylab('Elevation (m asl)') + xlab('Temperature (°C)') +
+  scale_colour_viridis_c(option = 'F', name = 'Year') +
+  theme_bw(base_size = 9) +
+  facet_wrap(~location_name, scales = 'free', ncol = 2)
+ggsave('figures/SI_LB.png', width = 6, height = 6, dpi = 500)
+
 ##################### Add hypsometry ########################
 
 # Get hypsometry and create character elevation
@@ -88,7 +101,8 @@ hypo.join = df.full.ice |>
   mutate(heat_J = spHeat_J_m3K * vol_layer_m3 * temp_K) %>% 
   mutate(heat_J_m2 = heat_J/Area_2D) |> 
   # mutate(heat_J_m2 = if_else(Area_2D == 0, 0, heat_J_m2)) |> 
-  ungroup()
+  ungroup() |> 
+  mutate(volUse = if_else(depth.asl > ice.asl, NA, vol_layer_m3)) 
 # caloric content (Kelvin) of ice or water (avg temp x thickness x sp heat)
 
 
@@ -178,8 +192,6 @@ fill.gaps.LH = expand.grid(location_name = 'Lake Hoare',
 # Take new extrapolated Lake Hoare dataframe and join to other lakes
 # Add cutoff depth to align bottom of most profiles
 hypo.fill = hypo.join |> 
-  # filter(location_name != 'Lake Hoare') |> 
-  # bind_rows(fill.gaps.LH) |> 
   group_by(location_name, date_time) %>% 
   arrange(location_name, date_time, desc(depth.asl)) |> 
   mutate(cutoffDepth = case_when(location_name == 'East Lake Bonney' ~ 25,

@@ -9,13 +9,15 @@ source('src/00_getLakeLevels.R')
 # McMurdo Dry Valleys, Antarctica (1993-2023, ongoing) ver 17. Environmental Data Initiative. 
 # https://doi.org/10.6073/pasta/650871571843bde5e0db6fb52cf549a4 (Accessed 2024-06-25).
 
-
 # Package ID: knb-lter-mcm.88.17 Cataloging System:https://pasta.edirepository.org.
 inUrl1  <- "https://pasta.lternet.edu/package/data/eml/knb-lter-mcm/88/17/91474a205d3dd99cc794f8510d2d99c5" 
 infile1 <- tempfile()
 download.file(inUrl1,infile1,method="curl")
 
-ctd <- read_csv(infile1) |> 
+# Read in 2023 data (will be online soon)
+ctd2023 = read_csv('datain/511_2023/ctd_2023.csv')
+
+ctd <- read_csv(infile1) |> bind_rows(ctd2023) |> 
   mutate(date_time = as.Date(mdy_hm(date_time))) |> 
   # rename(lake = location_name) |> 
   mutate(lake = case_when(location_name == 'Lake Fryxell' ~ 'Lake Fryxell', 
@@ -57,3 +59,4 @@ plotCTD('West Lake Bonney')
 
 ### Get maximum depths
 ctd |> group_by(location_name) |> summarise(max(depth_m, na.rm = T))
+

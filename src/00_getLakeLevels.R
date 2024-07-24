@@ -13,8 +13,11 @@ inUrl1  <- "https://pasta.lternet.edu/package/data/eml/knb-lter-mcm/68/13/76751b
 infile1 <- tempfile()
 download.file(inUrl1,infile1,method="curl")
 
+ll2023 = read_csv('datain/511_2023/ll_2023.csv')
+
 ll <- read_csv(infile1) |> 
   mutate(date_time = as.Date(mdy_hm(date_time))) |> 
+  bind_rows(ll2023) |> 
   rename(masl = `lake level(masl)`) |> 
   select(-`reference benchmark`, -`surveying benchmark`, -comments, -dataset_code) |> 
   filter(lake %in% c('Lake Bonney', 'Lake Fryxell','Lake Hoare')) |> 
@@ -39,7 +42,7 @@ lake.volume = ll |>
   mutate(location_name = factor(location_name, levels = c('Lake Fryxell','Lake Hoare', 'East Lake Bonney', 'West Lake Bonney')))
 
 # Approximate and duplicate for Lake Bonney
-ll.interp = expand_grid(date_time = seq.Date(as.Date('1991-01-26'), as.Date('2023-01-22'), by = 'day'),
+ll.interp = expand_grid(date_time = seq.Date(as.Date('1991-01-26'), as.Date('2023-11-23'), by = 'day'),
                         location_name = c('Lake Fryxell','Lake Hoare', 'East Lake Bonney', 'West Lake Bonney')) |> 
   left_join(lake.volume |> select(date_time, location_name, masl, Area_2D, cum_vol_m3)) |> 
   arrange(location_name, date_time, masl) |> 
@@ -57,7 +60,10 @@ inUrl1  <- "https://pasta.lternet.edu/package/data/eml/knb-lter-mcm/67/14/204ecc
 infile1 <- tempfile()
 download.file(inUrl1,infile1,method="curl")
 
-ice <- read_csv(infile1) |> 
+# Get 2023 ice thickness (will be online soon)
+ice2023 = read_csv('datain/511_2023/ice_2023.csv')
+
+ice <- read_csv(infile1) |> bind_rows(ice2023) |> 
   mutate(date_time = as.Date(mdy_hm(date_time))) |> 
   filter(year(date_time) > 1992) |> 
   filter(lake %in% c('East Lake Bonney', 'West Lake Bonney', 'Lake Fryxell','Lake Hoare')) |> 
@@ -72,7 +78,7 @@ ice <- read_csv(infile1) |>
 
 # Interpolate ice thickness
 ice.interp = expand_grid(location_name = c('East Lake Bonney', 'West Lake Bonney', 'Lake Fryxell','Lake Hoare'),
-                         date_time = seq.Date(as.Date('1993-12-09'), as.Date('2023-01-22'), by = 'day')) |> 
+                         date_time = seq.Date(as.Date('1993-12-09'), as.Date('2023-11-23'), by = 'day')) |> 
   left_join(ice) |> 
   group_by(location_name) |> 
   mutate(ice.approx = na.approx(z_water_m, na.rm = FALSE, rule = 2)) |> 
