@@ -39,19 +39,20 @@ wy = cast.df |>
   arrange(location_name, date_time, desc(depth.asl)) |> 
   summarise(vol = sum(volUse, na.rm = T), tempV = sum(tempV, na.rm = T)/vol, ice.approx = mean(ice.approx, na.rm = T), 
             heat_J = sum(heat_J, na.rm = T), heatIce_J = sum(heatIce_J, na.rm = T), 
-            Area_2D = first(Area_2D)) |> 
+            Area_2D = first(Area_2D), kd.ice = first(kd.ice)) |> 
   group_by(location_name, wyear) |> 
   mutate(daydiff = last(date_time) - first(date_time), tempdiff = last(tempV) - first(tempV))
 
 # Heat gain versus days between casts 
 ggplot(wy) +
   geom_point(aes(x = daydiff, y = tempdiff, size = -ice.approx, fill = -ice.approx), shape = 21) +
-  facet_wrap(~location_name)
+  facet_wrap(~location_name) +
+  geom_hline(aes(yintercept = 0), linetype = 2)
 
 # Ice thickness vs heat gain
-wy |> filter(daydiff >= 30 & daydiff <=60) |>
+wy |> filter(daydiff >= 25 & daydiff <=60) |>
   group_by(location_name, wyear) |> 
-  summarise(ice.approx = mean(ice.approx), daydiff = mean(daydiff), tempdiff = mean(tempdiff)) |> 
+  summarise(ice.approx = mean(ice.approx), daydiff = mean(daydiff), tempdiff = mean(tempdiff), kd.ice = mean(kd.ice, na.rm = T)) |> 
   ggplot() +
   geom_hline(aes(yintercept = 0), linetype = 2) +
   geom_point(aes(x = -ice.approx, y = tempdiff, fill = daydiff), shape = 21, size = 2) +
@@ -62,21 +63,29 @@ wy |> filter(daydiff >= 30 & daydiff <=60) |>
   facet_wrap(~location_name)
 
 # Ice thickness vs heat gain
-wy |> filter(daydiff >= 30 & daydiff <=60) |>
-  select(location_name, wyear, daydiff, tempV, ice.approx, cast) |> 
-  pivot_wider(names_from = cast, values_from = c(tempV, ice.approx)) |> 
+wy.summer = wy |> filter(daydiff >= 25 & daydiff <=60) |>
+  select(location_name, wyear, daydiff, kd.ice, tempV, ice.approx, cast) |> 
+  pivot_wider(names_from = cast, values_from = c(tempV, ice.approx, kd.ice)) |> 
   mutate(lastTemp = tempV_last-tempV_first, firstTemp = 0, 
-         lastIce = ice.approx_last-ice.approx_first, firstIce = 0) |> 
-  ggplot() +
-  # geom_hline(aes(yintercept = 0), linetype = 2) +
-  geom_point(aes(x = -lastIce, y = lastTemp, fill = -ice.approx_first), shape = 21, size = 2) +
-  scale_fill_met_c('Tam', name = 'Ice\nThickness') +
+         lastIce = ice.approx_last-ice.approx_first, firstIce = 0) 
+
+ggplot(wy.summer) +
+  geom_hline(aes(yintercept = 0), linetype = 2) +
+  geom_point(aes(x = ice.approx_last, y = lastTemp, fill = daydiff), shape = 21, size = 2) +
+  scale_fill_met_c('Tam', name = 'Day Diff') +
   ylab('Mean Temperature Difference (°C)') + 
   xlab('Ice Thickness (m)') +
   theme_bw() +
   facet_wrap(~location_name)
 
-
+ggplot(wy.summer) +
+  geom_hline(aes(yintercept = 0), linetype = 2) +
+  geom_point(aes(x = kd.ice_first * ice.approx_first, y = lastTemp, fill = -ice.approx_first), shape = 21, size = 2) +
+  scale_fill_met_c('Tam', name = 'Ice\nThickness') +
+  ylab('Mean Temperature Difference (°C)') + 
+  xlab('Kd Ice') +
+  theme_bw() +
+  facet_wrap(~location_name)
 
 ################## Heat loss in the winter ##################
 wi = cast.df |> 
@@ -85,7 +94,7 @@ wi = cast.df |>
   arrange(location_name, date_time, desc(depth.asl)) |> 
   summarise(vol = sum(volUse, na.rm = T), tempV = sum(tempV, na.rm = T)/vol, ice.approx = mean(ice.approx, na.rm = T), 
             heat_J = sum(heat_J, na.rm = T), heatIce_J = sum(heatIce_J, na.rm = T), 
-            Area_2D = first(Area_2D)) |> 
+            Area_2D = first(Area_2D), kd.ice = first(kd.ice)) |> 
   group_by(location_name, iyear) |> 
   mutate(daydiff = last(date_time) - first(date_time), tempdiff = last(tempV) - first(tempV)) |> 
   filter(yday(first(date_time)) >= 349 | yday(first(date_time)) <= 90 ) # Dec 15th - spring

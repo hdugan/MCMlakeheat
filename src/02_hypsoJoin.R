@@ -6,6 +6,11 @@ library(scico)
 library(ggtext)
 
 # Run 01 first 
+source('src/00_getPAR.R')
+getKd = getKd |> ungroup() |> 
+  filter(!is.na(kd.ice)) |> 
+  mutate(day2 = date_time + 2, day_2 = date_time - 2) |> 
+  select(-date_time)
 
 ##################### Add lake ice thickness ########################
 df.full.ice = df.spcH |> 
@@ -14,7 +19,10 @@ df.full.ice = df.spcH |>
   mutate(condUse = if_else(depth.asl > ice.asl, NA, ctd_conductivity_mscm)) |> 
   mutate(isIce = if_else(depth.asl > ice.asl, TRUE, FALSE)) |> 
   mutate(iceDensity_kgm3 = if_else(depth.asl > ice.asl, 900, NA)) |> 
-  mutate(location_name = factor(location_name, levels = c('Lake Fryxell','Lake Hoare', 'East Lake Bonney', 'West Lake Bonney')))
+  mutate(location_name = factor(location_name, levels = c('Lake Fryxell','Lake Hoare', 'East Lake Bonney', 'West Lake Bonney'))) |> 
+  left_join(getKd, by = join_by(location_name, date_time <= day2, date_time >= day_2)) |> # Join in kd within 2 days
+  select(-day2, -day_2)
+
 
 # specHeatIce = 0.506 cal/degC/g # 2108 J/kgK
 # latentHeatIce = 70.8 cal/g (or 334000 J/kg)

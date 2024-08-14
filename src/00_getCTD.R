@@ -15,9 +15,9 @@ infile1 <- tempfile()
 download.file(inUrl1,infile1,method="curl")
 
 # Read in 2023 data (will be online soon)
-ctd2023 = read_csv('datain/511_2023/ctd_2023.csv')
+# ctd2023 = read_csv('datain/511_2023/ctd_2023.csv')
 
-ctd <- read_csv(infile1) |> bind_rows(ctd2023) |> 
+ctd <- read_csv(infile1) |> #bind_rows(ctd2023) |> 
   mutate(date_time = as.Date(mdy_hm(date_time))) |> 
   # rename(lake = location_name) |> 
   mutate(lake = case_when(location_name == 'Lake Fryxell' ~ 'Lake Fryxell', 
