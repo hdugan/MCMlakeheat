@@ -6,6 +6,7 @@ library(zoo)
 library(mgcv)
 library(marelac)
 library(wql)
+library(ggtext)
 
 source('src/00_getCTD.R')
 source('src/00_gethypso.R')

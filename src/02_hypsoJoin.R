@@ -7,7 +7,9 @@ library(ggtext)
 
 # Run 01 first 
 source('src/00_getPAR.R')
-getKd = getKd |> ungroup() |> 
+getKd = getKd |> 
+  summarise(kd.ice = mean(kd.ice, na.rm = T)) |> 
+  ungroup() |> 
   filter(!is.na(kd.ice)) |> 
   mutate(day2 = date_time + 2, day_2 = date_time - 2) |> 
   select(-date_time)

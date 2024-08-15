@@ -13,11 +13,11 @@ inUrl1  <- "https://pasta.lternet.edu/package/data/eml/knb-lter-mcm/68/13/76751b
 infile1 <- tempfile()
 download.file(inUrl1,infile1,method="curl")
 
-# ll2023 = read_csv('datain/511_2023/ll_2023.csv')
+ll2023 = read_csv('datain/ll_2023.csv')
 
 ll <- read_csv(infile1) |> 
   mutate(date_time = as.Date(mdy_hm(date_time))) |> 
-  # bind_rows(ll2023) |> 
+  bind_rows(ll2023) |>
   rename(masl = `lake level(masl)`) |> 
   select(-`reference benchmark`, -`surveying benchmark`, -comments, -dataset_code) |> 
   filter(lake %in% c('Lake Bonney', 'Lake Fryxell','Lake Hoare')) |> 
@@ -61,9 +61,10 @@ infile1 <- tempfile()
 download.file(inUrl1,infile1,method="curl")
 
 # Get 2023 ice thickness (will be online soon)
-# ice2023 = read_csv('datain/511_2023/ice_2023.csv')
+ice2023 = read_csv('datain/ice_2023.csv')
 
-ice <- read_csv(infile1) |> #bind_rows(ice2023) |> 
+ice <- read_csv(infile1) |> 
+  bind_rows(ice2023) |> 
   mutate(date_time = as.Date(mdy_hm(date_time))) |> 
   filter(year(date_time) > 1992) |> 
   filter(lake %in% c('East Lake Bonney', 'West Lake Bonney', 'Lake Fryxell','Lake Hoare')) |> 
