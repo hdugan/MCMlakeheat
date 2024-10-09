@@ -119,8 +119,7 @@ ggplot(annual.df) +
   geom_point(aes(x = -ice.mean, y = deltatempV, color = castoff)) + 
   scale_color_manual(values = c('lightblue4','red3')) +
   facet_wrap(~location_name) +
-  theme_bw(base_size = 9) +
-  theme(axis.title.x = element_blank())
+  theme_bw(base_size = 9) 
 
 ggplot(annual.df) +
   geom_hline(aes(yintercept = 0), linetype = 2) +
@@ -135,6 +134,7 @@ ggplot(annual.df) +
 
 ggplot(annual.df) +
   geom_hline(aes(yintercept = 0), linetype = 2) +
+  geom_smooth(aes(x = deltaIce, y = deltatempV), method = 'lm') + 
   geom_vline(aes(xintercept = 0), linetype = 2) +
   geom_point(aes(x = deltaIce, y = deltatempV, fill = castoff), shape = 21, stroke = 0.2) + 
   scale_color_manual(values = c('#4477c9', '#e3dc10', '#b34f0c', '#4c944a'), name = 'Lake') +
@@ -157,10 +157,10 @@ ggplot(annual.df) +
 
 ggplot(annual.df |> filter(cast.diff < 30)) +
   geom_hline(aes(yintercept = 0), linetype = 2) +
-  geom_point(aes(x = kd.mean*-ice.mean, y = deltatempV, fill = castoff), shape = 21, stroke = 0.2) + 
+  geom_point(aes(x = ice.mean, y = deltatempV, fill = castoff), shape = 21, stroke = 0.2) + 
   scale_color_manual(values = c('#4477c9', '#e3dc10', '#b34f0c', '#4c944a'), name = 'Lake') +
   scale_fill_manual(values = c('#4477c9', '#e3dc10', '#b34f0c', '#4c944a'), name = 'Lake') +
-  ylab('Annual change mean temp') + xlab('Ice Kd') +
+  ylab('Annual change mean temp') + xlab('Ice Thickness') +
   facet_wrap(~location_name, scales = 'free', nrow = 1) +
   theme_bw(base_size = 9) +
   theme(legend.position = 'none')
