@@ -61,24 +61,53 @@ ggsave('figures/Fig2_Heat_TimeSeries.png', width = 4, height = 2.5, dpi = 500)
 write_csv(heat.day, 'dataout/MDVLakes_dailyHeatStorage.csv')
 
 ############ Timeseries plot of heat vs vol, ice, and mean temp ############
+ll.interp = ll.interp |> mutate(masl.zero = masl.approx - first(masl.approx))
+
 cols <- c("tempVol" = "black", "tempMean" = 'gray50', "heat" = "red3","ice" = "lightblue4","vol" = 'gold')
 ggplot(heat.day) +
-  geom_smooth(aes(x = date_time, y = tempV, col = 'tempVol')) +
-  geom_point(aes(x = date_time, y = tempV, col = 'tempVol'), size = 0.5) +
-  geom_smooth(aes(x = date_time, y = tempUse, col = 'tempMean')) +
+  geom_path(data = ll.interp, aes(x = date_time, y = masl.zero), size = 0.5) +
+  # geom_smooth(aes(x = date_time, y = tempV, col = 'tempVol'), method = 'gam', formula = y ~ s(x, bs = "cs", k = 20)) +
+  # geom_point(aes(x = date_time, y = tempV, col = 'tempVol'), size = 0.5) +
+  geom_smooth(aes(x = date_time, y = tempUse, col = 'tempMean'), method = 'gam', formula = y ~ s(x, bs = "cs", k = 20)) +
   geom_point(aes(x = date_time, y = tempUse, col = 'tempMean'), size = 0.5) +
-  geom_smooth(aes(x = date_time, y = (heat_J - heatIce_J)/1e16, col = 'heat')) +
+  geom_smooth(aes(x = date_time, y = (heat_J - heatIce_J)/1e16, col = 'heat'), method = 'gam', formula = y ~ s(x, bs = "cs", k = 20)) +
   geom_point(aes(x = date_time, y = (heat_J - heatIce_J)/1e16, col = 'heat'), size = 0.5) +
-  geom_smooth(aes(x = date_time, y = -ice.approx, col = 'ice')) +
+  geom_smooth(aes(x = date_time, y = -ice.approx, col = 'ice'), method = 'gam', formula = y ~ s(x, bs = "cs", k = 20)) +
   geom_point(aes(x = date_time, y = -ice.approx, col = 'ice'), size = 0.5) +
-  geom_smooth(aes(x = date_time, y = vol/1e7, col = 'vol')) +
+  geom_smooth(aes(x = date_time, y = vol/1e7, col = 'vol'), method = 'gam', formula = y ~ s(x, bs = "cs", k = 20)) +
   geom_point(aes(x = date_time, y = vol/1e7, col = 'vol'), size = 0.5) +
+  
   scale_colour_manual(values = cols) +
   ylab('Temp and Ice thickness, ignore heat/vol units') +
   facet_wrap(~location_name) +
   theme_bw(base_size = 9) +
   theme(axis.title.x = element_blank())
+
 ggsave('figures/SI_TimeSeries.png', width = 6, height = 6, dpi = 500)
+
+ggplot(heat.day) +
+  geom_path(data = ll.interp, aes(x = date_time, y = masl.zero), size = 0.5) +
+  # geom_smooth(aes(x = date_time, y = tempV, col = 'tempVol'), method = 'gam', formula = y ~ s(x, bs = "cs", k = 20)) +
+  # geom_point(aes(x = date_time, y = tempV, col = 'tempVol'), size = 0.5) +
+  geom_smooth(aes(x = date_time, y = tempUse, col = 'tempMean'), method = 'gam', formula = y ~ s(x, bs = "cs", k = 20)) +
+  geom_point(aes(x = date_time, y = tempUse, col = 'tempMean'), size = 0.5) +
+  geom_smooth(aes(x = date_time, y = (heat_J - heatIce_J)/1e16, col = 'heat'), method = 'gam', formula = y ~ s(x, bs = "cs", k = 20)) +
+  geom_point(aes(x = date_time, y = (heat_J - heatIce_J)/1e16, col = 'heat'), size = 0.5) +
+  geom_smooth(aes(x = date_time, y = -ice.approx, col = 'ice'), method = 'gam', formula = y ~ s(x, bs = "cs", k = 20)) +
+  geom_point(aes(x = date_time, y = -ice.approx, col = 'ice'), size = 0.5) +
+  geom_smooth(aes(x = date_time, y = vol/1e7, col = 'vol'), method = 'gam', formula = y ~ s(x, bs = "cs", k = 20)) +
+  geom_point(aes(x = date_time, y = vol/1e7, col = 'vol'), size = 0.5) +
+  
+  scale_colour_manual(values = cols) +
+  ylab('Temp and Ice thickness, ignore heat/vol units') +
+  facet_wrap(~location_name) +
+  theme_bw(base_size = 9) +
+  theme(axis.title.x = element_blank()) +
+  xlim(as.Date('2004-10-01'), NA) +
+  geom_vline(aes(xintercept = as.Date('2015-10-01')), linetype = 2)
+
+ggsave('figures/SI_TimeSeries_2005.png', width = 6, height = 6, dpi = 500)
+
 
 ########### Annual change ##############
 # Find case date that minimizes RMSE of days between casts 
