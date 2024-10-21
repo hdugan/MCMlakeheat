@@ -3,6 +3,38 @@ library(tidyverse)
 library(lubridate)
 library(patchwork)
 
+# Dugan, H., P. Doran, and A. Fountain. 2024. Daily measurement summaries from Lake Hoare Meteorological Station (HOEM), 
+# McMurdo Dry Valleys, Antarctica (1987-2022, ongoing) ver 8. Environmental Data Initiative. 
+# https://doi.org/10.6073/pasta/4677be41bb961d12e4bc7ddb916cfffe (Accessed 2024-10-18).
+inUrl1  <- "https://pasta.lternet.edu/package/data/eml/knb-lter-mcm/7111/8/bc9a2c9e926ceff4ff642622525db453" 
+infile1 <- tempfile()
+download.file(inUrl1,infile1,method="curl")
+
+hoem.airt <- read_csv(infile1) |> 
+  mutate(date_time = as.POSIXct(mdy(date_time)))
+
+ggplot(hoem.airt) +
+  geom_path(aes(x = date_time, y = avg_airt3m))
+
+inUrl4  <- "https://pasta.lternet.edu/package/data/eml/knb-lter-mcm/7111/8/e7a1ebe6f4479d13962088977254d272" 
+infile1 <- tempfile()
+download.file(inUrl4,infile1,method="curl")
+
+hoem.rad <- read_csv(infile1) |> 
+  mutate(date_time = as.POSIXct(mdy(date_time))) |> 
+  mutate(wyear = if_else(month(date_time) >= 10, year(date_time) + 1, year(date_time))) 
+ggplot(hoem.rad) +
+  geom_path(aes(x = date_time, y = avg_swradin))
+
+hoem.rad.a = hoem.rad |> 
+  group_by(wyear) |> 
+  summarise(swradin = sum(avg_swradin, na.rm = T)) |> 
+  mutate(swradin = ifelse(wyear %in% c(2015, 2023), NA, swradin)) |> 
+  mutate(wyear = wyear - 1)
+
+ggplot(hoem.rad.a) +
+  geom_path(aes(x = wyear, y = swradin))
+
 # Doran, P. and A. Fountain. 2023. High frequency measurements from Lake Fryxell Meteorological Station 
 # (FRLM), McMurdo Dry Valleys, Antarctica (1993-2022, ongoing) ver 17. Environmental Data Initiative. 
 # https://doi.org/10.6073/pasta/015d3ff36195d0531dff560f0ca28634 (Accessed 2024-10-10).

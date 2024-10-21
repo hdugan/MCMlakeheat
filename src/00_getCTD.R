@@ -5,6 +5,30 @@ library(patchwork)
 
 source('src/00_getLakeLevels.R')
 
+# Older data 
+shirtcliffe_bonney_1963 = read_csv('datain/papers/shirtcliffe_bonney_1963.csv') |> 
+  mutate(depth.asl = (62.2-4) - depth_m) |> 
+  mutate(location_name = 'East Lake Bonney') |> 
+  mutate(date_time = as.Date('1963-11-01'))
+
+spigel_ELB = read_csv('datain/papers/Spigel_Oct_1991_ELB.csv') |> 
+  mutate(location_name = 'East Lake Bonney') |> 
+  mutate(date_time = as.Date('1991-10-30')) |> 
+  left_join(ll.interp, by = join_by(location_name, date_time)) |>  # Join by masl 
+  mutate(depth.asl = masl.approx - depth_m)
+  
+spigel_WLB = read_csv('datain/papers/Spigel_Dec_1993_WLB.csv') |> 
+  mutate(location_name = 'West Lake Bonney') |> 
+  mutate(date_time = as.Date('1993-12-01')) |> 
+  left_join(ll.interp, by = join_by(location_name, date_time)) |>  # Join by masl 
+  mutate(depth.asl = masl.approx - depth_m)
+
+spigel_LF = read_csv('datain/papers/Spigel_Jan_1991_LF.csv') |> 
+  mutate(location_name = 'Lake Fryxell') |> 
+  mutate(date_time = as.Date('1991-01-26')) |> #actually Jan 21, using 26 for lake level 
+  left_join(ll.interp, by = join_by(location_name, date_time)) |>  # Join by masl 
+  mutate(depth.asl = masl.approx - depth_m)
+
 # Priscu, J. 2023. Conductivity, temperature, and depth (CTD) vertical profiles collected from lakes in the 
 # McMurdo Dry Valleys, Antarctica (1993-2023, ongoing) ver 17. Environmental Data Initiative. 
 # https://doi.org/10.6073/pasta/650871571843bde5e0db6fb52cf549a4 (Accessed 2024-06-25).
@@ -42,6 +66,13 @@ plotCTD <- function(lakename) {
     labs(title = lakename) +
     theme_bw(base_size = 9)
   
+  if (lakename == 'East Lake Bonney'){
+    p1 = p1 + geom_path(data = shirtcliffe_bonney_1963, aes(x = Temp_C, y = depth.asl), color = 'gold') 
+  }
+  if (lakename == 'Lake Fryxell'){
+    p1 = p1 + geom_path(data = spigel_LF, aes(x = Temp_C, y = depth.asl), color = 'gold') 
+  }
+  
   p2 = ggplot(ctd.lake) +
     geom_path(aes(x = ctd_conductivity_mscm, y = depth.asl, group = limno_run, color = year(date_time))) +
     ylab('Elevation (m asl)') + xlab('Cond (mS/cm)') +
@@ -50,6 +81,7 @@ plotCTD <- function(lakename) {
   
   p1 + p2 + plot_layout(guides = 'collect') + plot_annotation(title = lakename)
 }
+
 
 plotCTD('Lake Fryxell') /
 plotCTD('Lake Hoare') /

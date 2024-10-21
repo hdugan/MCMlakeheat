@@ -5,7 +5,8 @@ source('src/functions/getBestCastDay.R')
 heat.day = hypo.fill |> 
   mutate(tempV = tempUse * vol_layer_m3) |> 
   summarise(ice.approx = mean(ice.approx, na.rm = T), heat_J = sum(heat_J, na.rm = T), heatIce_J = sum(heatIce_J, na.rm = T), 
-            Area_2D = first(Area_2D), vol = sum(volUse, na.rm = T), tempV = sum(tempV, na.rm = T)/vol, tempUse = mean(tempUse, na.rm = T),
+            Area_2D = first(Area_2D), vol = sum(volUse, na.rm = T), LL = first(masl.approx), 
+            tempV = sum(tempV, na.rm = T)/vol, tempUse = mean(tempUse, na.rm = T),
             kd.ice = first(kd.ice)) |> 
   mutate(heatTot_J_m2 = (heat_J - heatIce_J)/Area_2D) |> 
   ungroup() |> 
@@ -137,29 +138,54 @@ annual.df = pullBestCastDay(heat.day, 'Lake Fryxell', 1, 11) |>
   bind_rows(pullBestCastDay(heat.day, 'Lake Hoare', 1, 11)) |> 
   bind_rows(pullBestCastDay(heat.day, 'East Lake Bonney', 1, 11)) |> 
   bind_rows(pullBestCastDay(heat.day, 'West Lake Bonney', 1, 11)) |> 
-  mutate(deltaVol = c(NA, diff(vol)), deltatempV = c(NA, diff(tempUse)), 
+  mutate(deltaVol = c(NA, diff(vol)), deltatempV = c(NA, diff(tempV)),
+         deltaTempUse = c(NA, diff(tempUse)), 
          deltaIce = c(NA, -diff(ice.approx)), deltaHeatTot = c(NA, diff(heatTot_J_m2)),
+         deltaLL = c(NA, diff(LL)),
          ice.mean = (ice.approx + lag(ice.approx))/2, 
-         kd.mean = (kd.ice + lag(kd.ice))/2) |>
-  mutate(castoff = if_else(cast.diff > 30 | lag(cast.diff) > 30, TRUE, FALSE))
+         kd.mean = (kd.ice + lag(kd.ice))/2, 
+         deltaiceLL = deltaLL - deltaIce) |>
+  mutate(castoff = if_else(cast.diff > 30 | lag(cast.diff) > 30, TRUE, FALSE)) |> 
+  mutate(group = case_when(wyear < 2005 ~ '1) pre 2005', 
+                           wyear < 2015 ~ '2) 2004-2015',
+                           wyear >= 2015 ~ '3) 2015-2024')) |> 
+  filter(wyear != 2022) |> 
+  left_join(hoem.rad.a)
   
-
-ggplot(annual.df) +
-  geom_point(aes(x = -ice.mean, y = deltatempV, color = castoff)) + 
+annual.df |>
+  ggplot() +
+  geom_point(aes(x = -ice.mean, y = deltaTempUse, color = castoff)) + 
   scale_color_manual(values = c('lightblue4','red3')) +
-  facet_wrap(~location_name) +
+  facet_wrap(~location_name, ncol = 3) +
   theme_bw(base_size = 9) 
+
+annual.df |> 
+  ggplot() +
+  geom_point(aes(x = deltaVol, y = deltaTempUse, color = deltaIce)) + 
+  scale_color_scico(palette = 'roma', direction = -1) +
+  facet_wrap(~location_name, ncol = 3) +
+  theme_bw(base_size = 9) 
+
+annual.df |> 
+  filter(!wyear %in% c(2010:2022)) |> 
+  ggplot() +
+  geom_point(aes(x = deltaIce, y = deltaTempUse, color = castoff)) + 
+  scale_color_manual(values = c('lightblue4','red3')) +
+  facet_wrap(~location_name, ncol = 3) +
+  theme_bw(base_size = 9) 
+
 
 ggplot(annual.df) +
   geom_hline(aes(yintercept = 0), linetype = 2) +
   geom_vline(aes(xintercept = 0), linetype = 2) +
-  geom_point(aes(x = deltaVol/1e6, y = deltatempV, fill = castoff), shape = 21, stroke = 0.2) + 
+  geom_point(aes(x = deltaLL, y = deltaTempUse, fill = castoff), shape = 21, stroke = 0.2) + 
   scale_color_manual(values = c('#4477c9', '#e3dc10', '#b34f0c', '#4c944a'), name = 'Lake') +
   scale_fill_manual(values = c('#4477c9', '#e3dc10', '#b34f0c', '#4c944a'), name = 'Lake') +
   ylab('Annual change mean temp') + xlab('Annual change volume (x1e6)') +
-  facet_wrap(~location_name, scales = 'free', nrow = 1) +
+  facet_wrap(~location_name + group, scales = 'free', ncol = 3) +
   theme_bw(base_size = 9) +
   theme(legend.position = 'none')
+
 
 ggplot(annual.df) +
   geom_hline(aes(yintercept = 0), linetype = 2) +
@@ -175,8 +201,8 @@ ggplot(annual.df) +
 
 ggplot(annual.df) +
   geom_hline(aes(yintercept = 0), linetype = 2) +
-  geom_smooth(aes(x = ice.mean, y = deltatempV), method = 'lm') + 
-  geom_point(aes(x = ice.mean, y = deltatempV, fill = castoff), shape = 21, stroke = 0.2) + 
+  geom_smooth(aes(x = ice.mean, y = deltaTempUse), method = 'lm') + 
+  geom_point(aes(x = ice.mean, y = deltaTempUse, fill = castoff), shape = 21, stroke = 0.2) + 
   scale_color_manual(values = c('#4477c9', '#e3dc10', '#b34f0c', '#4c944a'), name = 'Lake') +
   scale_fill_manual(values = c('#4477c9', '#e3dc10', '#b34f0c', '#4c944a'), name = 'Lake') +
   ylab('Annual change mean temp') + xlab('Ice thickness') +
@@ -184,17 +210,19 @@ ggplot(annual.df) +
   theme_bw(base_size = 9) +
   theme(legend.position = 'none')
 
-ggplot(annual.df |> filter(cast.diff < 30)) +
-  geom_hline(aes(yintercept = 0), linetype = 2) +
-  geom_point(aes(x = ice.mean, y = deltatempV, fill = castoff), shape = 21, stroke = 0.2) + 
-  scale_color_manual(values = c('#4477c9', '#e3dc10', '#b34f0c', '#4c944a'), name = 'Lake') +
-  scale_fill_manual(values = c('#4477c9', '#e3dc10', '#b34f0c', '#4c944a'), name = 'Lake') +
-  ylab('Annual change mean temp') + xlab('Ice Thickness') +
-  facet_wrap(~location_name, scales = 'free', nrow = 1) +
-  theme_bw(base_size = 9) +
-  theme(legend.position = 'none')
 
-# 
+summary(lm(deltaTempUse ~ ice.mean + deltaVol + swradin, data = annual.df |> filter(location_name == 'Lake Fryxell')))
+summary(lm(deltaTempUse ~ ice.mean + deltaVol + swradin, data = annual.df |> filter(location_name == 'Lake Hoare')))
+summary(lm(deltaTempUse ~ ice.mean + deltaVol + swradin, data = annual.df |> filter(location_name == 'East Lake Bonney')))
+summary(lm(deltaTempUse ~ ice.mean + deltaVol + swradin, data = annual.df |> filter(location_name == 'West Lake Bonney')))
+
+summary(lm(deltaTempUse ~ ice.mean, data = annual.df |> filter(location_name == 'Lake Fryxell', !wyear %in% c(2010:2017))))
+summary(lm(deltaTempUse ~ deltaIce, data = annual.df |> filter(location_name == 'Lake Hoare')))
+summary(lm(deltaTempUse ~ ice.mean, data = annual.df |> filter(location_name == 'East Lake Bonney')))
+summary(lm(deltaTempUse ~ ice.mean, data = annual.df |> filter(location_name == 'West Lake Bonney')))
+
+
+ 
 # p1/p2
 # ggsave('figures/SI_Deltas.png', width = 6, height = 6, dpi = 500)
 
