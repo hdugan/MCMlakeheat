@@ -1,4 +1,6 @@
 library(mgcv)
+install.packages("VLTimeCausality")
+library(VLTimeCausality)
 
 # Summarise by day 
 heat.day = hypo.fill |> 
