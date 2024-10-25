@@ -51,7 +51,7 @@ heat.day = hypo.fill |>
 
 lakecolor = data.frame(uselake = c('Lake Fryxell','Lake Hoare', 'East Lake Bonney', 'West Lake Bonney'), 
            plotColor = c('#4477c9', '#e3dc10', '#b34f0c', '#4c944a'), 
-           k = c(30,40,40,40))
+           k = c(30,30,40,40))
 
 output.plots = list()
 output.fit1 = list()
@@ -233,7 +233,7 @@ for (i in 1:4) {
   
   ####################################### FIT 2 #########################################################
   # Fit a linear model
-  output.fit2[[i]] <- lm(temp.diff ~ ice.diff + fit.ice + LL.diff + vol.diff, data = newYear2)
+  output.fit2[[i]] <- lm(temp.diff ~ ice.diff + fit.ice + LL.diff  + vol.diff, data = newYear2)
   
   ################################################################################################
 }
@@ -364,4 +364,11 @@ for (i in 1:4) {
   print(VLTimeCausality::VLGrangerFunc(Y = output.predict[[i]]$fit.temp, X = output.predict[[i]]$LL.diff, gamma = 0.5)$XgCsY)
   print(VLTimeCausality::VLGrangerFunc(Y = output.predict[[i]]$fit.temp, X = output.predict[[i]]$vol.diff, gamma = 0.5)$XgCsY)
 }
+
+for (i in 1:4) {
+  print(i)
+  print(VLTimeCausality::VLGrangerFunc(Y = output.predict[[i]]$fit.temp, X = output.predict[[i]]$fit.ice, gamma = 0.5)$XgCsY)
+  print(VLTimeCausality::VLGrangerFunc(Y = output.predict[[i]]$fit.temp, X = lead(output.predict[[i]]$fit.ice), gamma = 0.5)$XgCsY)
+}
+
 

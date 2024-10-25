@@ -33,7 +33,7 @@ hoem.rad.a = hoem.rad |>
   mutate(wyear = wyear - 1)
 
 ggplot(hoem.rad.a) +
-  geom_path(aes(x = wyear, y = swradin))
+  geom_col(aes(x = wyear, y = swradin))
 
 # Doran, P. and A. Fountain. 2023. High frequency measurements from Lake Fryxell Meteorological Station 
 # (FRLM), McMurdo Dry Valleys, Antarctica (1993-2022, ongoing) ver 17. Environmental Data Initiative. 
