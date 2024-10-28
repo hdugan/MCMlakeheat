@@ -23,6 +23,9 @@ ctd.join = ctd |>
   # remove bad data 
   filter(!(location_name == 'West Lake Bonney' & date_time == as.Date('2002-12-16'))) |> 
   filter(!(location_name == 'East Lake Bonney' & date_time == as.Date('2002-11-14'))) |> 
+  # 2005 data looks about 1 m too low?
+  mutate(depth.asl = if_else(year(date_time) == 2005 & month(date_time) >= 10, depth.asl +1, depth.asl)) |> 
+  # Bad data points 
   mutate(ctd_conductivity_mscm = if_else(location_name == 'West Lake Bonney' & date_time == as.Date('2002-11-14') & ctd_conductivity_mscm > 85, 
                                          NA, ctd_conductivity_mscm)) |> 
   mutate(ctd_conductivity_mscm = if_else(location_name == 'West Lake Bonney' & date_time == as.Date('2002-11-14') & 

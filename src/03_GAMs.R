@@ -7,6 +7,7 @@ library(broom)
 library(xtable)
 library(corrr)
 library(GGally)
+library(olsrr) #collinearity 
 
 # Summarise by day 
 heat.day = hypo.fill |> 
@@ -56,8 +57,13 @@ lakecolor = data.frame(uselake = c('Lake Fryxell','Lake Hoare', 'East Lake Bonne
 output.plots = list()
 output.fit1 = list()
 output.fit2 = list()
+output.fit3 = list()
+output.fit4 = list()
+output.fit5 = list()
+output.fit5.5 = list()
 output.predict = list()
 
+# Big old loop ####
 for (i in 1:4) {
   # Set up 
   uselake = lakecolor$uselake[i]
@@ -197,9 +203,14 @@ for (i in 1:4) {
     mutate(tempV.diff = c(0,diff(fit.tempV))) |> 
     mutate(LL.diff = c(0,diff(fit.LL))) |> 
     mutate(vol.diff = c(0,diff(fit.vol)))
-  
+
   output.predict[[i]] = newYear2
-  
+
+  # Standardize predictors
+  newYear2.scale = newYear2 %>%
+    mutate(across(where(is.numeric), scale))
+    
+  # Plots of Diffs 
   p5 = ggplot(newYear2) +
     geom_col(aes(x = date_time, y = temp.diff), fill = plotColor) +
     ylab('Temp Diff (°C)') +
@@ -223,19 +234,29 @@ for (i in 1:4) {
     plot_layout(guides = 'collect')
   # ggsave(paste0('figures/GAM_', uselake, '.png'), width = 3.5, height = 8.5, dpi = 500)
   
-  summary(lm(temp.diff ~ ice.diff + LL.diff + ice.diff:LL.diff, data = newYear2))
-  summary(lm(temp.diff ~ ice.diff + fit.ice + LL.diff + vol.diff, data = newYear2))
-  summary(lm(fit.temp ~ fit.ice , data = newYear2))
+  # summary(lm(temp.diff ~ ice.diff + LL.diff + ice.diff:LL.diff, data = newYear2))
+  # summary(lm(temp.diff ~ ice.diff + fit.ice + LL.diff + vol.diff, data = newYear2))
+  # summary(lm(fit.temp ~ fit.ice , data = newYear2))
   
   ########################################### FIT 1 #####################################################
   # Fit a linear model
-  output.fit1[[i]] <- lm(temp.diff ~ ice.diff + LL.diff + ice.diff:LL.diff, data = newYear2)
+  output.fit1[[i]] <- lm(temp.diff ~ ice.diff + LL.diff + ice.diff:LL.diff, data = newYear2.scale)
   
   ####################################### FIT 2 #########################################################
   # Fit a linear model
-  output.fit2[[i]] <- lm(temp.diff ~ ice.diff + fit.ice + LL.diff  + vol.diff, data = newYear2)
+  output.fit2[[i]] <- lm(temp.diff ~ fit.ice, data = newYear2.scale)
   
-  ################################################################################################
+  ####################################### FIT 3 #########################################################
+  # Fit a linear model
+  output.fit3[[i]] <- lm(fit.temp ~ fit.ice, data = newYear2.scale)
+
+  ####################################### FIT 4 #########################################################
+  # Fit a linear model
+  output.fit4[[i]] <- lm(fit.temp ~ fit.LL, data = newYear2.scale)
+
+  output.fit5[[i]] <- lm(fit.temp ~ fit.LL + fit.ice, data = newYear2.scale)
+  output.fit5.5[[i]] <- lm(fit.temp ~ fit.LL + fit.ice + fit.LL:fit.ice, data = newYear2.scale)
+  
 }
 
 # Join two plots
@@ -246,31 +267,6 @@ output.plots[[3]] | output.plots[[4]]
 ggsave(paste0('figures/GAM_ELB_WLB.png'), width = 6.5, height = 8.5, dpi = 500)
 
 
-getCoeffs <- function(i, usefit) {
-  AIC = broom::glance(usefit[[i]])$AIC
-  BIC = broom::glance(usefit[[i]])$BIC
-
-  # Extract summary of the model
-  summary_fit <- summary(usefit[[i]])
-  
-  # Extract adjusted R-squared
-  adj_r_squared <- round(summary_fit$adj.r.squared,2)
-  
-  # Extract coefficients and p-values
-  coeffs <- summary_fit$coefficients
-  coeffs_df <- as.data.frame(coeffs) |> 
-    select(Estimate, 4,)
-  coeffs_df = bind_cols(Lake = lakecolor$uselake[i], Parameter = rownames(coeffs_df), coeffs_df)
-  # Remove the row names
-  rownames(coeffs_df) <- NULL
-  # Add significance stars based on p-values
-  coeffs_df$Signif <- cut(coeffs_df[, 4], 
-                          breaks = c(-Inf, 0.001, 0.01, 0.05, 0.1, Inf), 
-                          labels = c("***", "**", "*", ".", " "))
-  coeffs_df = coeffs_df |> left_join(data.frame(Parameter = '(Intercept)', AIC = AIC, BIC = BIC, 
-                                                r2 = adj_r_squared))
-  return(coeffs_df)
-}
 # getCoeffs(1, usefit = output.fit1) 
 
 #Synchrony between timeseries
@@ -325,34 +321,88 @@ options(digits=2)
 correlation_table <- corrr::correlate(sync2, method = "pearson")
 correlation_table
 
-# Output coefficient of lm table
+### Assess model fits 
+getCoeffs <- function(i, usefit) {
+  AIC = broom::glance(usefit[[i]])$AIC
+  BIC = broom::glance(usefit[[i]])$BIC
+  
+  # Extract summary of the model
+  summary_fit <- summary(usefit[[i]])
+  
+  # Extract adjusted R-squared
+  adj_r_squared <- round(summary_fit$adj.r.squared,2)
+  
+  # Extract coefficients and p-values
+  coeffs <- summary_fit$coefficients
+  coeffs_df <- as.data.frame(coeffs) |> 
+    select(Estimate, 4,) 
+  
+  coeffs_df = bind_cols(Lake = lakecolor$uselake[i], Parameter = rownames(coeffs_df), coeffs_df) |> 
+    filter(Parameter != '(Intercept)')
+  
+  # Remove the row names
+  rownames(coeffs_df) <- NULL
+  # Add significance stars based on p-values
+  coeffs_df$Signif <- cut(coeffs_df[, 4], 
+                          breaks = c(-Inf, 0.001, 0.01, 0.05, 0.1, Inf), 
+                          labels = c("***", "**", "*", ".", " "))
+  coeffs_df = coeffs_df |> left_join(data.frame(Parameter = coeffs_df$Parameter[1], AIC = AIC, BIC = BIC, 
+                                                r2 = adj_r_squared))
+  # VIFs 
+  if(nrow(coeffs_df) >= 2) {
+    out.coeffs = coeffs_df |> left_join(
+      data.frame(Lake = lakecolor$uselake[i]) |> 
+      bind_cols(ols_vif_tol(usefit[[i]])) |> 
+        rename(Parameter = Variables))
+  } else {
+    out.coeffs = coeffs_df
+  }
+  
+  return(out.coeffs)
+}
+
+### Variable Inflation Factors to assess colinearity 
+# VIF = 1: There is no correlation between a given predictor variable and any other predictor variables in the model.
+# VIF between 1 and 5: There is moderate correlation between a given predictor variable and other predictor variables in the model.
+# VIF > 5: There is severe correlation between a given predictor variable and other predictor variables in the model.
+
+##### Output coefficient of lm table #####
 coeffs_fit1 = getCoeffs(1, usefit = output.fit1) |> bind_rows(getCoeffs(2, usefit = output.fit1)) |> 
-  bind_rows(getCoeffs(3, usefit = output.fit1)) |> bind_rows(getCoeffs(4, usefit = output.fit1))
+  bind_rows(getCoeffs(3, usefit = output.fit1)) |> bind_rows(getCoeffs(4, usefit = output.fit1)) 
 
 coeffs_fit2 = getCoeffs(1, usefit = output.fit2) |> bind_rows(getCoeffs(2, usefit = output.fit2)) |> 
   bind_rows(getCoeffs(3, usefit = output.fit2)) |> bind_rows(getCoeffs(4, usefit = output.fit2))
 
-# Create the LaTeX table
-latex_table <- xtable(coeffs_fit1,math.style.exponents = TRUE, digits = 3,
-                      caption = paste0('Linear model fit 1'), 
-                      align = c("l", "l", "l", "r", "r", "r", 'r', 'r', 'r'))
-# Convert to LaTeX
-print(latex_table, 
-      include.rownames = FALSE, 
-      sanitize.text.function = identity, 
-      latex.environments = "center")
+coeffs_fit3 = getCoeffs(1, usefit = output.fit3) |> bind_rows(getCoeffs(2, usefit = output.fit3)) |> 
+  bind_rows(getCoeffs(3, usefit = output.fit3)) |> bind_rows(getCoeffs(4, usefit = output.fit3)) 
 
-# Create the LaTeX table
-latex_table <- xtable(coeffs_fit2, math.style.exponents = TRUE, digits = 3,
-                      caption = paste0('Linear model fit 1'), 
-                      align = c("l", "l", "l", "r", "r", "r", 'r', 'r', 'r'))
-# Convert to LaTeX
-print(latex_table, 
-      include.rownames = FALSE, 
-      sanitize.text.function = identity, 
-      latex.environments = "center")
+coeffs_fit4 = getCoeffs(1, usefit = output.fit4) |> bind_rows(getCoeffs(2, usefit = output.fit4)) |> 
+  bind_rows(getCoeffs(3, usefit = output.fit4)) |> bind_rows(getCoeffs(4, usefit = output.fit4)) 
 
+coeffs_fit5 = getCoeffs(1, usefit = output.fit5) |> bind_rows(getCoeffs(2, usefit = output.fit5)) |> 
+  bind_rows(getCoeffs(3, usefit = output.fit5)) |> bind_rows(getCoeffs(4, usefit = output.fit5))
 
+coeffs_fit5.5 = getCoeffs(1, usefit = output.fit5.5) |> bind_rows(getCoeffs(2, usefit = output.fit5.5)) |> 
+  bind_rows(getCoeffs(3, usefit = output.fit5.5)) |> bind_rows(getCoeffs(4, usefit = output.fit5.5))
+
+latexTable <- function(coefffit, usecols = 8) {
+  # Create the LaTeX table
+  latex_table <- xtable(coefffit,math.style.exponents = TRUE, digits = 3,
+                        caption = paste0('Linear model fit 1'), 
+                          align = c("l", "l", "l", rep("r", usecols)))
+  # Convert to LaTeX
+  print(latex_table, 
+        include.rownames = FALSE, 
+        sanitize.text.function = identity, 
+        latex.environments = "center")
+}
+
+latexTable(coeffs_fit5)
+latexTable(coeffs_fit5.5)
+latexTable(coeffs_fit4, usecols = 6)
+latexTable(coeffs_fit3, usecols = 6)
+latexTable(coeffs_fit1)
+latexTable(coeffs_fit2)
 
 ################################ Variable-lag Granger Causality ################################
 for (i in 1:4) {
@@ -371,4 +421,12 @@ for (i in 1:4) {
   print(VLTimeCausality::VLGrangerFunc(Y = output.predict[[i]]$fit.temp, X = lead(output.predict[[i]]$fit.ice), gamma = 0.5)$XgCsY)
 }
 
+for (i in 1:4) {
+  print(i)
+  print(VLTimeCausality::VLGrangerFunc(Y = output.predict[[i]]$temp.diff, X = output.predict[[i]]$fit.ice, gamma = 0.5)$XgCsY)
+  print(VLTimeCausality::VLGrangerFunc(Y = output.predict[[i]]$temp.diff, X = lead(output.predict[[i]]$fit.ice), gamma = 0.5)$XgCsY)
+}
 
+for (i in 1:4) {
+  print(acf(output.predict[[i]]$temp.diff))
+}

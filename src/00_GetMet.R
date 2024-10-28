@@ -79,12 +79,11 @@ download.file(inUrl1,infile1,method="curl")
 stream.vg <- read_csv(infile1) |> 
   mutate(date_time = as.POSIXct(mdy_hm(date_time))) 
 
-stream.vg |> filter(date_time >= as.POSIXct('2007-11-01') & date_time <= as.POSIXct('2008-04-01')) |> 
+# Annual timeseries
+stream.vg |>  
+  mutate(wyear = if_else(month(date_time) >= 10, year(date_time) + 1, year(date_time))) |> 
+  group_by(wyear) |> 
+  summarise(discharge_rate = sum(discharge_rate, na.rm = T)) |> 
   ggplot() +
-  geom_path(aes(x = date_time, y = discharge_rate)) +
-  geom_hline(aes(yintercept = 0), linetype = 2)
+  geom_col(aes(x = wyear, y = discharge_rate))
 
-stream.vg |> filter(date_time >= as.POSIXct('2007-11-01') & date_time <= as.POSIXct('2008-04-01')) |> 
-  ggplot() +
-  geom_path(aes(x = date_time, y = water_temp)) +
-  geom_hline(aes(yintercept = 0), linetype = 2)
