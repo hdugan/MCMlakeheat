@@ -402,7 +402,7 @@ latexTable(coeffs_fit5.5)
 latexTable(coeffs_fit4, usecols = 6)
 latexTable(coeffs_fit3, usecols = 6)
 latexTable(coeffs_fit1)
-latexTable(coeffs_fit2)
+latexTable(coeffs_fit2, usecols = 6)
 
 ################################ Variable-lag Granger Causality ################################
 for (i in 1:4) {
@@ -427,9 +427,30 @@ for (i in 1:4) {
   print(VLTimeCausality::VLGrangerFunc(Y = output.predict[[i]]$temp.diff, X = lead(output.predict[[i]]$fit.ice), gamma = 0.5)$XgCsY)
 }
 
+#### Autocorrelation in timeseries ####
 for (i in 1:4) {
-  print(acf(output.predict[[i]]$temp.diff))
+  uselake = lakecolor$uselake[i]
+  nrows = length(output.predict[[i]]$temp.diff)
+  print(acf(output.predict[[i]]$temp.diff, main = uselake, ci = 0.99))
+  # Compute confidence interval 
+  # Use 95 or 99% confidence? 
+  ci = qnorm((1 + 0.99)/2)/sqrt(nrows)
+  
+  sig = acf(output.predict[[i]]$temp.diff, plot = F)$acf[2] > ci
+  print(paste0(uselake, ' acf temp.diff: ', sig))
+ 
 }
+
 for (i in 1:4) {
-  print(acf(output.predict[[i]]$ice.diff))
+  uselake = lakecolor$uselake[i]
+  nrows = length(output.predict[[i]]$ice.diff)
+  print(acf(output.predict[[i]]$ice.diff, main = uselake, ci = 0.99))
+  # Compute confidence interval 
+  # Use 95 or 99% confidence? 
+  ci = qnorm((1 + 0.99)/2)/sqrt(nrows)
+  
+  sig = acf(output.predict[[i]]$ice.diff, plot = F)$acf[2] > ci
+  print(paste0(uselake, ' acf ice.diff: ', sig))
+  # print(pacf(output.predict[[i]]$ice.diff, main = lakecolor$uselake[i]))
 }
+
