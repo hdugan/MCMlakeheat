@@ -11,10 +11,17 @@ infile1 <- tempfile()
 download.file(inUrl1,infile1,method="curl")
 
 hoem.airt <- read_csv(infile1) |> 
-  mutate(date_time = as.POSIXct(mdy(date_time)))
+  mutate(date_time = as.POSIXct(mdy(date_time))) |> 
+  mutate(wyear = if_else(month(date_time) >= 10, year(date_time) + 1, year(date_time))) |> 
+  group_by(wyear) |> 
+  mutate(airt = if_else(avg_airt3m < -5, NA, avg_airt3m + 5)) |> 
+  summarise(airt = sum(airt, na.rm = T))
 
 ggplot(hoem.airt) +
-  geom_path(aes(x = date_time, y = avg_airt3m))
+  geom_col(aes(x = wyear, y = airt)) +
+  xlim(1995, NA)
+
+
 
 inUrl4  <- "https://pasta.lternet.edu/package/data/eml/knb-lter-mcm/7111/8/e7a1ebe6f4479d13962088977254d272" 
 infile1 <- tempfile()
