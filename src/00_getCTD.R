@@ -2,6 +2,7 @@
 library(tidyverse)
 library(lubridate)
 library(patchwork)
+library(ggnewscale)
 
 source('src/00_getLakeLevels.R')
 
@@ -28,6 +29,14 @@ spigel_LF = read_csv('datain/papers/Spigel_Jan_1991_LF.csv') |>
   mutate(date_time = as.Date('1991-01-26')) |> #actually Jan 21, using 26 for lake level 
   left_join(ll.interp, by = join_by(location_name, date_time)) |>  # Join by masl 
   mutate(depth.asl = masl.approx - depth_m)
+
+hoare_LF = read_csv('datain/papers/Hoare_Nov_1963.csv') |> 
+  mutate(location_name = 'Lake Fryxell') |> 
+  mutate(date_time = as.Date('1963-11-20')) |> #Late november
+  mutate(depth.asl = (17.5-1.9) - depth_m)
+# Chinn [1993] presents comparisonsfor all lakes that show increases in water levels between 1974 and 1990
+# 4 meters for Lake Bonney
+# 1.9 meters for Lake Fryxell 
 
 # Priscu, J. 2023. Conductivity, temperature, and depth (CTD) vertical profiles collected from lakes in the 
 # McMurdo Dry Valleys, Antarctica (1993-2023, ongoing) ver 17. Environmental Data Initiative. 
@@ -62,33 +71,39 @@ plotCTD <- function(lakename) {
   p1 = ggplot(ctd.lake) +
     geom_path(aes(x = ctd_temp_c, y = depth.asl, group = limno_run, color = year(date_time))) +
     ylab('Elevation (m asl)') + xlab('Temp (°C)') +
-    scale_colour_viridis_c(option = 'F', name = 'Year') +
+    scale_colour_viridis_c(option = 'F', name = 'Year', limits = c(1993,2023)) +
     labs(title = lakename) +
     theme_bw(base_size = 9)
   
   if (lakename == 'East Lake Bonney'){
-    p1 = p1 + geom_path(data = shirtcliffe_bonney_1963, aes(x = Temp_C, y = depth.asl), color = 'gold') 
-  }
+    p1 = p1 + 
+      new_scale_color() + 
+      geom_path(data = shirtcliffe_bonney_1963, aes(x = Temp_C, y = depth.asl), color = 'gold3', linewidth = 1.5) }
   if (lakename == 'Lake Fryxell'){
-    p1 = p1 + geom_path(data = spigel_LF, aes(x = Temp_C, y = depth.asl), color = 'gold') 
+    p1 = p1 + 
+      new_scale_color() + 
+      geom_path(data = spigel_LF, aes(x = Temp_C, y = depth.asl, color = factor(year(date_time))), linewidth = 1.5) +
+      geom_path(data = hoare_LF, aes(x = Temp_C, y = depth.asl, color = factor(year(date_time))), linewidth = 1.5) +
+      scale_color_manual(values = c('gold','gold3'), name = 'Year')
   }
   
   p2 = ggplot(ctd.lake) +
     geom_path(aes(x = ctd_conductivity_mscm, y = depth.asl, group = limno_run, color = year(date_time))) +
     ylab('Elevation (m asl)') + xlab('Cond (mS/cm)') +
-    scale_colour_viridis_c(option = 'F', name = 'Year') +
+    scale_colour_viridis_c(option = 'F', name = 'Year', limits = c(1993,2023)) +
     theme_bw(base_size = 9)
   
-  p1 + p2 + plot_layout(guides = 'collect') + plot_annotation(title = lakename)
+  p1 + p2 + plot_annotation(title = lakename)
 }
 
 
-plotCTD('Lake Fryxell') /
+(plotCTD('Lake Fryxell') /
 plotCTD('Lake Hoare') /
 plotCTD('East Lake Bonney') /
-plotCTD('West Lake Bonney') 
+plotCTD('West Lake Bonney')) +
+  plot_layout(guides = 'collect')
 
-# ggsave('figures/ctdprofiles.png', width = 6, height = 12, dpi = 500)  
+# ggsave('figures/ctdprofiles.png', width = 6, height = 9, dpi = 500)  
 
 ### Get maximum depths
 ctd |> group_by(location_name) |> summarise(max(depth_m, na.rm = T))
