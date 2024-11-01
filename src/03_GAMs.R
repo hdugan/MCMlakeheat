@@ -52,7 +52,7 @@ heat.day = hypo.fill |>
 
 lakecolor = data.frame(uselake = c('Lake Fryxell','Lake Hoare', 'East Lake Bonney', 'West Lake Bonney'), 
            plotColor = c('#4477c9', '#e3dc10', '#b34f0c', '#4c944a'), 
-           k = c(30,30,40,40))
+           k = c(30,30,30,30))
 
 output.plots = list()
 output.fit1 = list()
@@ -397,7 +397,7 @@ latexTable <- function(coefffit, usecols = 8) {
         latex.environments = "center")
 }
 
-latexTable(coeffs_fit5)
+# latexTable(coeffs_fit5)
 latexTable(coeffs_fit5.5)
 latexTable(coeffs_fit4, usecols = 6)
 latexTable(coeffs_fit3, usecols = 6)
