@@ -116,6 +116,22 @@ hypo.join = df.full.ice |>
 # caloric content (Kelvin) of ice or water (avg temp x thickness x sp heat)
 
 
+# When did sampling take place? 
+hypo.join |> 
+  group_by(location_name, date_time) |> 
+  summarise() |> 
+  mutate(fakeyear = `year<-`(date_time, 2024)) |> 
+  mutate(location_name = factor(location_name, levels = c('Lake Fryxell','Lake Hoare', 'East Lake Bonney', 'West Lake Bonney'))) |> 
+  ggplot() +
+  geom_tile(aes(x = fakeyear, y = year(date_time)), linewidth  = 200) +
+  theme_bw(base_size = 9) +
+  scale_y_continuous(breaks = seq(1993,2024, by = 2), name = 'Year') +
+  scale_x_date(date_labels = '%b', date_breaks = '2 months', name = 'Day') +
+  facet_wrap(~location_name) 
+
+ggsave('figures/SI_SamplingDays.png', width = 6, height = 4, dpi = 500)
+
+
 ##################### Plot heat maps #####################
 makeHeat <- function(name, filllimits = c(NA,NA)) {
   ggplot(hypo.join %>% 

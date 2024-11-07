@@ -121,13 +121,14 @@ for (i in 1:4) {
     bind_cols(predict(mod.LL, newYear, se.fit = TRUE)) |> rename(fit.LL = fit, se.fit.LL = se.fit) |> 
     bind_cols(predict(mod.tempV, newYear, se.fit = TRUE)) |> rename(fit.tempV = fit, se.fit.tempV = se.fit)
   
-  ## Create the confidence interval
+  ## Create the 95% confidence interval, get critical t-value 
   crit.t.ice <- qt(0.975, df = df.residual(mod.ice))
   crit.t.temp = qt(0.975, df = df.residual(mod.temp))
   crit.t.vol = qt(0.975, df = df.residual(mod.vol))
   crit.t.LL = qt(0.975, df = df.residual(mod.LL))
   crit.t.tempV = qt(0.975, df = df.residual(mod.tempV))
   
+  # For a two-sided confidence interval, multiply the critical value by the sample's standard error of the mean
   newYear <- newYear |> mutate(upper.ice = fit.ice + (crit.t.ice * se.fit.ice),
                        lower.ice = fit.ice - (crit.t.ice * se.fit.ice)) |> 
     mutate(upper.temp = fit.temp + (crit.t.temp * se.fit.temp),
@@ -196,7 +197,7 @@ for (i in 1:4) {
   #   plot_layout(guides = 'collect')
   # 
   newYear2 = newYear |>
-    filter(month(date_time) == 11) |> 
+    filter(month(date_time) == 12) |> 
     select(date_time, fit.ice, fit.temp, fit.vol, fit.LL, fit.tempV) |> 
     mutate(ice.diff = c(0,diff(fit.ice))) |> 
     mutate(temp.diff = c(0,diff(fit.temp))) |> 
