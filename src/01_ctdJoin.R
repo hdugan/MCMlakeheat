@@ -284,14 +284,14 @@ df.full.ice |>
 
 ggsave('figures/SI_SamplingDays.png', width = 6, height = 4, dpi = 500)
 
-# Check plot - temperature
-ggplot(df.full.ice |> dplyr::filter(location_name %in% c('East Lake Bonney', 'West Lake Bonney'))) +
-  geom_rect(data = icebox |> dplyr::filter(location_name %in% c('East Lake Bonney', 'West Lake Bonney')),
-            aes(xmin = ctd_temp_c, xmax = ctd_temp_c, ymin = max.depth, ymax = min.depth, group = year(date_time)), 
-            color = 'grey50',size = 0.3) +
-  geom_path(aes(x = tempUse, y = depth.asl, group = date_time, color = year(date_time))) +
-  ylab('Elevation (m asl)') + xlab('Temperature (°C)') +
-  scale_colour_viridis_c(option = 'F', name = 'Year') +
-  theme_bw(base_size = 9) +
-  facet_wrap(~location_name, scales = 'free', ncol = 2)
-ggsave('figures/SI_LB.png', width = 6, height = 6, dpi = 500)
+# # Check plot - temperature
+# ggplot(df.full.ice |> dplyr::filter(location_name %in% c('East Lake Bonney', 'West Lake Bonney'))) +
+#   geom_rect(data = icebox |> dplyr::filter(location_name %in% c('East Lake Bonney', 'West Lake Bonney')),
+#             aes(xmin = ctd_temp_c, xmax = ctd_temp_c, ymin = max.depth, ymax = min.depth, group = year(date_time)), 
+#             color = 'grey50',size = 0.3) +
+#   geom_path(aes(x = tempUse, y = depth.asl, group = date_time, color = year(date_time))) +
+#   ylab('Elevation (m asl)') + xlab('Temperature (°C)') +
+#   scale_colour_viridis_c(option = 'F', name = 'Year') +
+#   theme_bw(base_size = 9) +
+#   facet_wrap(~location_name, scales = 'free', ncol = 2)
+# ggsave('figures/SI_LB.png', width = 6, height = 6, dpi = 500)

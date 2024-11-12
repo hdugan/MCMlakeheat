@@ -12,28 +12,6 @@ library(Hmisc) #correlation matrix w/ Sig
 
 #!!!! 2005 data from WLB hypo looks too warm
 
-## fit GAM using gamm() with a CAR(1)
-# mod <- gamm(ice.approx ~ s(dec.date, k = 15), data = heat.day |> filter(location_name == 'Lake Fryxell'),
-#             correlation = corCAR1(form = ~ dec.date), method = "REML")
-# # The estimated value of ϕ for the CAR(1) can be extracted from the fitted model via the $lme
-# # component. Here we just extract the correlation structure component.
-# ## estimate of phi and confidence interval
-# smallPhi <- intervals(mod$lme, which = "var-cov")$corStruct
-# smallPhi
-# ## summary object
-# summary(mod$gam)
-# ## plot CAR(1) process
-# S <- seq(0, 50, length = 100)
-# car1 <- setNames(as.data.frame(t(outer(smallPhi, S, FUN = `^`)[1, , ])),
-#                  c("Lower","Correlation","Upper"))
-# car1 <- transform(car1, S = S)
-# ggplot(car1, aes(x = S, y = Correlation)) +
-#   geom_ribbon(aes(ymax = Upper, ymin = Lower),
-#               fill = "black", alpha = 0.2) +
-#   geom_line() +
-#   ylab(expression(italic(c) * (list(h, varphi)))) +
-#   xlab(expression(h ~ (years)))
-
 lakecolor = data.frame(uselake = c('Lake Fryxell','Lake Hoare', 'East Lake Bonney', 'West Lake Bonney'), 
            plotColor = c('#4477c9', '#e3dc10', '#b34f0c', '#4c944a'), 
            k = c(30,30,30,30))
@@ -46,6 +24,7 @@ output.fit4 = list()
 output.fit5 = list()
 output.fit5.5 = list()
 output.predict = list()
+output.predict.dec = list()
 
 # Big old loop ####
 for (i in 1:4) {
@@ -117,86 +96,22 @@ for (i in 1:4) {
     mutate(upper.LL = fit.LL + (crit.t.LL * se.fit.LL),
            lower.LL = fit.LL - (crit.t.LL * se.fit.LL)) 
   
-  plotCustom = list(  scale_colour_grey(),
-                      theme_bw(base_size = 9),
-                      theme(axis.title.x = element_blank(),
-                            legend.position = 'none',
-                            legend.title = element_blank()))
-  
-  
-  ## Plot estimated trend
-  p1 = ggplot(newYear, aes(x = dec.date, y = fit.temp)) +
-    geom_ribbon(aes(ymin = lower.temp, ymax = upper.temp, x = dec.date), alpha = 0.2,
-                inherit.aes = FALSE, fill = plotColor) +
-    geom_point(data = heat.day |> filter(location_name == uselake), 
-               mapping = aes(x = dec.date, y = tempUse, color = factor(month(date_time))),
-               inherit.aes = FALSE) +
-    geom_line() +
-    labs(y = "Mean Temp (°C)") +
-    plotCustom
-  
-  p2 = ggplot(newYear, aes(x = dec.date, y = fit.ice)) +
-    geom_ribbon(aes(ymin = lower.ice, ymax = upper.ice, x = dec.date), alpha = 0.2,
-                inherit.aes = FALSE, fill = plotColor) +
-    geom_point(data = heat.day |> filter(location_name == uselake), 
-               mapping = aes(x = dec.date, y = ice.approx, color = factor(month(date_time))),
-               inherit.aes = FALSE) +
-    geom_line() +
-    labs(y = "Ice Thickness (m)") +
-    plotCustom
-  
-  p4 = ggplot(newYear, aes(x = dec.date, y = fit.LL)) +
-    geom_ribbon(aes(ymin = lower.LL, ymax = upper.LL, x = dec.date), alpha = 0.2,
-                inherit.aes = FALSE, fill = plotColor) +
-    geom_point(data = heat.day |> filter(location_name == uselake), 
-               mapping = aes(x = dec.date, y = LL, color = factor(month(date_time))),
-               inherit.aes = FALSE) +
-    geom_line() +
-    geom_ribbon(aes(ymin = lower.LL + lower.ice, ymax = upper.LL + upper.ice, x = dec.date), alpha = 0.2,
-                inherit.aes = FALSE, fill = plotColor) +
-    geom_line(aes(y = fit.LL + fit.ice)) +
-    labs(y = "Lake & Water Level (m)")  +
-    plotCustom
-  
-  # Join plots
-  # p1/p2/p4/p3 +
-  #   plot_layout(guides = 'collect')
-  # 
+  # Create difference columns
   newYear2 = newYear |>
     filter(month(date_time) == 12) |> 
     mutate(fit.WL = fit.LL + fit.ice) |> 
-    select(date_time, fit.ice, fit.temp, fit.LL, fit.WL) |> 
+    select(date_time, dec.date, fit.ice, fit.temp, fit.LL, fit.WL) |>
     mutate(ice.diff = c(0,diff(fit.ice))) |> 
     mutate(temp.diff = c(0,diff(fit.temp))) |> 
     mutate(LL.diff = c(0,diff(fit.LL))) |> 
     mutate(WL.diff = c(0,diff(fit.WL)))
 
-  output.predict[[i]] = newYear2
+  output.predict[[i]] = newYear |> mutate(location_name = uselake)
+  output.predict.dec[[i]] = newYear2 |> mutate(location_name = uselake)
 
   # Standardize predictors
   newYear2.scale = newYear2 %>%
     mutate(across(where(is.numeric), scale))
-    
-  # Plots of Diffs 
-  p5 = ggplot(newYear2) +
-    geom_col(aes(x = date_time, y = temp.diff), fill = plotColor) +
-    ylab('Temp Diff (°C)') +
-    plotCustom
-  p6 = ggplot(newYear2) +
-    geom_col(aes(x = date_time, y = ice.diff), fill = plotColor) +
-    ylab('Ice Diff (°C)') +
-    plotCustom
-  p7 = ggplot(newYear2) +
-    geom_col(aes(x = date_time, y = LL.diff), fill = plotColor) +
-    ylab('LL Diff (°C)') +
-    plotCustom
-
-  
-  # Join plots
-  output.plots[[i]] = (p1 + labs(title = uselake))/p2/p4/p5/p6/p7 + 
-    plot_annotation(subtitle = uselake) +
-    plot_layout(guides = 'collect')
-  # ggsave(paste0('figures/GAM_', uselake, '.png'), width = 3.5, height = 8.5, dpi = 500)
   
   ########################################### FIT 1 #####################################################
   # Fit a linear model
@@ -219,17 +134,81 @@ for (i in 1:4) {
   
 }
 
-# Join two plots
-output.plots[[1]] | output.plots[[2]] 
-ggsave(paste0('figures/GAM_LF_LH.png'), width = 6.5, height = 8.5, dpi = 500)
 
-output.plots[[3]] | output.plots[[4]] 
-ggsave(paste0('figures/GAM_ELB_WLB.png'), width = 6.5, height = 8.5, dpi = 500)
+################ GAM PLOTS #################
+full.predict = bind_rows(output.predict) |> 
+  mutate(location_name = factor(location_name, levels = c('Lake Fryxell','Lake Hoare', 'East Lake Bonney', 'West Lake Bonney'))) 
+full.predict.dec = bind_rows(output.predict.dec) |> 
+  mutate(location_name = factor(location_name, levels = c('Lake Fryxell','Lake Hoare', 'East Lake Bonney', 'West Lake Bonney'))) |> 
 
+plotCustom = list(  scale_colour_grey(),
+                    scale_fill_manual(values = c('#4477c9', '#e3dc10', '#b34f0c', '#4c944a')),
+                    theme_bw(base_size = 9),
+                    facet_wrap(~location_name, scales = 'free_y', nrow = 1),
+                    theme(axis.title.x = element_blank(),
+                          legend.position = 'none',
+                          legend.title = element_blank()))
 
-# getCoeffs(1, usefit = output.fit1) 
+p1 = ggplot(full.predict, aes(x = dec.date, y = fit.temp)) +
+  geom_ribbon(aes(ymin = lower.temp, ymax = upper.temp, x = dec.date, fill = location_name), alpha = 0.5,
+              inherit.aes = FALSE) +
+  geom_point(data = heat.day, 
+             mapping = aes(x = dec.date, y = tempUse, color = factor(month(date_time))),
+             inherit.aes = FALSE) +
+  geom_line() +
+  labs(y = "Mean Temp (°C)") +
+  plotCustom
 
-#Synchrony between timeseries ####
+p2 = ggplot(full.predict, aes(x = dec.date, y = fit.ice)) +
+  geom_ribbon(aes(ymin = lower.ice, ymax = upper.ice, x = dec.date, fill = location_name), alpha = 0.5,
+              inherit.aes = FALSE) +
+  geom_point(data = heat.day , 
+             mapping = aes(x = dec.date, y = ice.approx, color = factor(month(date_time))),
+             inherit.aes = FALSE) +
+  geom_line() +
+  labs(y = "Ice Thickness (m)") +
+  plotCustom + 
+  theme(strip.background = element_blank(), strip.text.x = element_blank())
+
+p3 = ggplot(full.predict, aes(x = dec.date, y = fit.LL)) +
+  geom_ribbon(aes(ymin = lower.LL, ymax = upper.LL, x = dec.date, , fill = location_name), alpha = 0.5,
+              inherit.aes = FALSE) +
+  geom_point(data = heat.day, 
+             mapping = aes(x = dec.date, y = LL, color = factor(month(date_time))),
+             inherit.aes = FALSE) +
+  geom_line() +
+  geom_ribbon(aes(ymin = lower.LL + lower.ice, ymax = upper.LL + upper.ice, x = dec.date, fill = location_name), alpha = 0.5,
+              inherit.aes = FALSE) +
+  geom_line(aes(y = fit.LL + fit.ice)) +
+  labs(y = "Lake & Water Level (m)")  +
+  plotCustom +
+  theme(strip.background = element_blank(), strip.text.x = element_blank())
+
+# Plots of Diffs 
+p5 = ggplot(full.predict.dec) +
+  geom_col(aes(x = date_time, y = temp.diff, fill = location_name)) +
+  ylab('Temp Diff (°C)') +
+  plotCustom + 
+  theme(strip.background = element_blank(), strip.text.x = element_blank())
+
+p6 = ggplot(full.predict.dec) +
+  geom_col(aes(x = date_time, y = ice.diff, fill = location_name)) +
+  ylab('Ice Diff (°C)') +
+  plotCustom + 
+  theme(strip.background = element_blank(), strip.text.x = element_blank())
+
+p7 = ggplot(full.predict.dec) +
+  geom_col(aes(x = date_time, y = LL.diff, fill = location_name)) +
+  ylab('LL Diff (°C)') +
+  plotCustom + 
+  theme(strip.background = element_blank(), strip.text.x = element_blank())
+
+p1/p2/p3/p5/p6/p7 + plot_annotation(tag_levels = 'a', tag_suffix = ')') &
+  theme(plot.tag = element_text(size = 8))
+ggsave(paste0('figures/Fig4_GAMS.png'), width = 6.5, height = 8.5, dpi = 500)
+
+################ Synchrony between timeseries #################
+
 sync1 = data.frame(date_time = output.predict[[3]]$date_time, 
                    LF_temp = c(NA, NA,output.predict[[1]]$fit.temp), 
               LH_temp = c(NA, NA, output.predict[[2]]$fit.temp,NA), 
@@ -272,7 +251,7 @@ correlation_table
 cor_2 <- rcorr(as.matrix(sync2[,-1]), type = 'pearson')
 cor_2
 
-### Assess model fits 
+################ Assess model fits #################
 getCoeffs <- function(i, usefit) {
   AIC = broom::glance(usefit[[i]])$AIC
   BIC = broom::glance(usefit[[i]])$BIC
