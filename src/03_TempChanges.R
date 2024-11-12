@@ -36,31 +36,6 @@ hypo.thetical = hypo.fill |>
   ungroup() |> 
   mutate(location_name = factor(location_name, levels = c('Lake Fryxell','Lake Hoare', 'East Lake Bonney', 'West Lake Bonney')))
 
-######### Plot timeseries ##########
-ggplot(heat.day) +
-  geom_smooth(aes(x = date_time, y = heatTot_J_m2/1e6, color = location_name), method = 'gam') +
-  geom_point(aes(x = date_time, y = heatTot_J_m2/1e6, fill = location_name), shape = 21, stroke = 0.2) +
-  # geom_smooth(data = hypo.thetical, aes(x = date_time, y = heatTot_J_m2/1e6, group = location_name), color = 'grey70', method = 'gam', alpha = 0.5) +
-  # geom_point(data = hypo.thetical, aes(x = date_time, y = heatTot_J_m2/1e6, fill = location_name), shape = 21, stroke = 0.2, alpha = 0.5) +
-  # 
-  scale_color_manual(values = c('#4477c9', '#e3dc10', '#b34f0c', '#4c944a'), name = 'Lake') +
-  scale_fill_manual(values = c('#4477c9', '#e3dc10', '#b34f0c', '#4c944a'), name = 'Lake') +
-  ylab('Heat storage (MJ m^2 )') +
-  theme_bw(base_size = 9) +
-  theme(axis.title.x = element_blank(),
-        axis.title.y = element_markdown(),
-        legend.position = 'bottom',
-        legend.title = element_blank(),
-        legend.text = element_text(size = 7),
-        legend.key.size = unit(0.2,'cm'),
-        legend.margin = margin(0, 0, 0, 0))
-# facet_wrap(~location_name) 
-
-ggsave('figures/Fig2_Heat_TimeSeries.png', width = 4, height = 2.5, dpi = 500)
-
-# Output heat data. 
-write_csv(heat.day, 'dataout/MDVLakes_dailyHeatStorage.csv')
-
 ############ Timeseries plot of heat vs vol, ice, and mean temp ############
 ll.interp = ll.interp |> mutate(masl.zero = masl.approx - first(masl.approx))
 

@@ -8,7 +8,23 @@ library(xtable)
 library(corrr)
 library(GGally)
 library(olsrr) #collinearity 
-library(Hmisc) #correlation matrix w/ Sig
+
+# Summarise by day 
+heat.day = hypo.fill |> 
+  mutate(tempV = tempUse * vol_layer_m3) |> 
+  summarise(ice.approx = mean(ice.approx, na.rm = T), heat_J = sum(heat_J, na.rm = T), heatIce_J = sum(heatIce_J, na.rm = T), 
+            Area_2D = first(Area_2D), vol = sum(volUse, na.rm = T), LL = first(masl.approx), 
+            tempV = sum(tempV, na.rm = T)/vol, tempUse = mean(tempUse, na.rm = T),
+            ) |> 
+  # mutate(deltaVol = c(NA, diff(vol)), deltaLL = c(NA, diff(LL)), deltaIce = c(NA, -diff(ice.approx))) |> 
+  # mutate(deltaiceLL = deltaLL - deltaIce) |> 
+  mutate(heatTot_J_m2 = (heat_J - heatIce_J)/Area_2D) |> 
+  ungroup() |> 
+  mutate(location_name = factor(location_name, levels = c('Lake Fryxell','Lake Hoare', 'East Lake Bonney', 'West Lake Bonney'))) |> 
+  mutate(dec.date = decimal_date(date_time), yday = yday(date_time)) |> 
+  mutate(yday = if_else(yday > 200, yday, yday+365)) |> 
+  filter(month(date_time) >= 10) |> 
+  mutate(tempUse = if_else(location_name == 'West Lake Bonney' & year(date_time) == 2005, NA, tempUse))
 
 #!!!! 2005 data from WLB hypo looks too warm
 
@@ -70,15 +86,18 @@ for (i in 1:4) {
                  data = heat.day |> filter(location_name == uselake))
   mod.temp <- gam(tempUse ~ s(dec.date, k = usek, bs = 'tp'), 
                  data = heat.day |> filter(location_name == uselake))
-  mod.vol <- gam(vol ~ s(dec.date, k = usek, bs = 'tp'),
+  mod.vol <- gam(vol ~ s(dec.date, k = usek, bs = 'tp'), 
                   data = heat.day |> filter(location_name == uselake))
   mod.LL <- gam(LL ~ s(dec.date, k = usek, bs = 'tp'), 
                  data = heat.day |> filter(location_name == uselake))
+  mod.tempV <- gam(tempV ~ s(dec.date, k = usek, bs = 'tp'), 
+                  data = heat.day |> filter(location_name == uselake))
   
   summary(mod.ice)
   summary(mod.temp)
   summary(mod.vol)
   summary(mod.LL)
+  summary(mod.tempV)
   N <- 300 # number of points at which to evaluate the smooth
   
   ## create new data to predict at start of every month
@@ -99,13 +118,15 @@ for (i in 1:4) {
     bind_cols(predict(mod.ice, newYear, se.fit = TRUE)) |> rename(fit.ice = fit, se.fit.ice = se.fit) |> 
     bind_cols(predict(mod.temp, newYear, se.fit = TRUE)) |> rename(fit.temp = fit, se.fit.temp = se.fit) |> 
     bind_cols(predict(mod.vol, newYear, se.fit = TRUE)) |> rename(fit.vol = fit, se.fit.vol = se.fit) |> 
-    bind_cols(predict(mod.LL, newYear, se.fit = TRUE)) |> rename(fit.LL = fit, se.fit.LL = se.fit) 
+    bind_cols(predict(mod.LL, newYear, se.fit = TRUE)) |> rename(fit.LL = fit, se.fit.LL = se.fit) |> 
+    bind_cols(predict(mod.tempV, newYear, se.fit = TRUE)) |> rename(fit.tempV = fit, se.fit.tempV = se.fit)
   
   ## Create the 95% confidence interval, get critical t-value 
   crit.t.ice <- qt(0.975, df = df.residual(mod.ice))
   crit.t.temp = qt(0.975, df = df.residual(mod.temp))
   crit.t.vol = qt(0.975, df = df.residual(mod.vol))
   crit.t.LL = qt(0.975, df = df.residual(mod.LL))
+  crit.t.tempV = qt(0.975, df = df.residual(mod.tempV))
   
   # For a two-sided confidence interval, multiply the critical value by the sample's standard error of the mean
   newYear <- newYear |> mutate(upper.ice = fit.ice + (crit.t.ice * se.fit.ice),
@@ -115,9 +136,12 @@ for (i in 1:4) {
     mutate(upper.vol = fit.vol + (crit.t.vol * se.fit.vol),
            lower.vol = fit.vol - (crit.t.vol * se.fit.vol)) |> 
     mutate(upper.LL = fit.LL + (crit.t.LL * se.fit.LL),
-           lower.LL = fit.LL - (crit.t.LL * se.fit.LL)) 
+           lower.LL = fit.LL - (crit.t.LL * se.fit.LL)) |> 
+    mutate(upper.tempV = fit.tempV + (crit.t.tempV * se.fit.tempV),
+           lower.tempV = fit.tempV - (crit.t.tempV * se.fit.tempV))
   
-  plotCustom = list(  scale_colour_grey(),
+  
+  plotCustom = list(scale_color_manual(values = c('#3a6c85','#67bfeb', '#b1d4e6')),
                       theme_bw(base_size = 9),
                       theme(axis.title.x = element_blank(),
                             legend.position = 'none',
@@ -128,6 +152,8 @@ for (i in 1:4) {
   p1 = ggplot(newYear, aes(x = dec.date, y = fit.temp)) +
     geom_ribbon(aes(ymin = lower.temp, ymax = upper.temp, x = dec.date), alpha = 0.2,
                 inherit.aes = FALSE, fill = plotColor) +
+    # geom_ribbon(aes(ymin = lower.tempV, ymax = upper.tempV, x = dec.date), alpha = 0.2,
+    #             inherit.aes = FALSE, fill = "black") +
     geom_point(data = heat.day |> filter(location_name == uselake), 
                mapping = aes(x = dec.date, y = tempUse, color = factor(month(date_time))),
                inherit.aes = FALSE) +
@@ -145,6 +171,17 @@ for (i in 1:4) {
     labs(y = "Ice Thickness (m)") +
     plotCustom
   
+  p3 = ggplot(newYear, aes(x = dec.date, y = fit.vol)) +
+    geom_ribbon(aes(ymin = lower.vol, ymax = upper.vol, x = dec.date), alpha = 0.2,
+                inherit.aes = FALSE, fill = plotColor) +
+    geom_point(data = heat.day |> filter(location_name == uselake), 
+               mapping = aes(x = dec.date, y = vol, color = factor(month(date_time))),
+               inherit.aes = FALSE) +
+    scale_y_continuous(labels=function(x) x/1e6) +
+    geom_line() +
+    labs(y = bquote(Volume~(x10^6~m^3)))  +
+    plotCustom
+  
   p4 = ggplot(newYear, aes(x = dec.date, y = fit.LL)) +
     geom_ribbon(aes(ymin = lower.LL, ymax = upper.LL, x = dec.date), alpha = 0.2,
                 inherit.aes = FALSE, fill = plotColor) +
@@ -152,10 +189,7 @@ for (i in 1:4) {
                mapping = aes(x = dec.date, y = LL, color = factor(month(date_time))),
                inherit.aes = FALSE) +
     geom_line() +
-    geom_ribbon(aes(ymin = lower.LL + lower.ice, ymax = upper.LL + upper.ice, x = dec.date), alpha = 0.2,
-                inherit.aes = FALSE, fill = plotColor) +
-    geom_line(aes(y = fit.LL + fit.ice)) +
-    labs(y = "Lake & Water Level (m)")  +
+    labs(y = "Lake Level (m)")  +
     plotCustom
   
   # Join plots
@@ -164,12 +198,12 @@ for (i in 1:4) {
   # 
   newYear2 = newYear |>
     filter(month(date_time) == 12) |> 
-    mutate(fit.WL = fit.LL + fit.ice) |> 
-    select(date_time, fit.ice, fit.temp, fit.LL, fit.WL) |> 
+    select(date_time, fit.ice, fit.temp, fit.vol, fit.LL, fit.tempV) |> 
     mutate(ice.diff = c(0,diff(fit.ice))) |> 
     mutate(temp.diff = c(0,diff(fit.temp))) |> 
+    mutate(tempV.diff = c(0,diff(fit.tempV))) |> 
     mutate(LL.diff = c(0,diff(fit.LL))) |> 
-    mutate(WL.diff = c(0,diff(fit.WL)))
+    mutate(vol.diff = c(0,diff(fit.vol)))
 
   output.predict[[i]] = newYear2
 
@@ -190,13 +224,20 @@ for (i in 1:4) {
     geom_col(aes(x = date_time, y = LL.diff), fill = plotColor) +
     ylab('LL Diff (°C)') +
     plotCustom
-
+  p8 = ggplot(newYear2) +
+    geom_col(aes(x = date_time, y = vol.diff), fill = plotColor) +
+    ylab('Vol Diff (°C)') +
+    plotCustom
   
   # Join plots
-  output.plots[[i]] = (p1 + labs(title = uselake))/p2/p4/p5/p6/p7 + 
+  output.plots[[i]] = (p1 + labs(title = uselake))/p2/p4/p3/p5/p6/p7/p8 + 
     plot_annotation(subtitle = uselake) +
     plot_layout(guides = 'collect')
   # ggsave(paste0('figures/GAM_', uselake, '.png'), width = 3.5, height = 8.5, dpi = 500)
+  
+  # summary(lm(temp.diff ~ ice.diff + LL.diff + ice.diff:LL.diff, data = newYear2))
+  # summary(lm(temp.diff ~ ice.diff + fit.ice + LL.diff + vol.diff, data = newYear2))
+  # summary(lm(fit.temp ~ fit.ice , data = newYear2))
   
   ########################################### FIT 1 #####################################################
   # Fit a linear model
@@ -229,7 +270,7 @@ ggsave(paste0('figures/GAM_ELB_WLB.png'), width = 6.5, height = 8.5, dpi = 500)
 
 # getCoeffs(1, usefit = output.fit1) 
 
-#Synchrony between timeseries ####
+#Synchrony between timeseries
 sync1 = data.frame(date_time = output.predict[[3]]$date_time, 
                    LF_temp = c(NA, NA,output.predict[[1]]$fit.temp), 
               LH_temp = c(NA, NA, output.predict[[2]]$fit.temp,NA), 
@@ -244,19 +285,22 @@ sync1 |> pivot_longer(cols = 2:5) |>
   scale_color_manual(values = c('#4477c9', '#e3dc10', '#b34f0c', '#4c944a')) +
   theme_bw(base_size = 9)
 
+# ggpairs(sync1, 
+#         title = "Scatterplot Temp Correlations",
+#         upper = list(continuous = wrap("cor", method="pearson", stars = FALSE)),
+#         lower = list(continuous = wrap("smooth", alpha = 1, size = 0.8))) +
+#   theme_minimal(base_size = 9)
+
 options(digits=2)
 correlation_table <- corrr::correlate(sync1, method = "pearson")
 correlation_table
 
-cor_2 <- rcorr(as.matrix(sync1[,-1]), type = 'pearson')
-cor_2
-
-#Syncrony between timeseries of ice thickness
+#Syncrony between timeseries
 sync2 = data.frame(date_time = output.predict[[3]]$date_time, 
-                   LF_ice = c(NA, NA,output.predict[[1]]$fit.ice), 
-                   LH_ice = c(NA, NA, output.predict[[2]]$fit.ice,NA), 
-                   ELB_ice = output.predict[[3]]$fit.ice, 
-                   WLB_ice = output.predict[[4]]$fit.ice)
+                   LF_tempdiff = c(NA, NA,output.predict[[1]]$temp.diff), 
+                   LH_tempdiff = c(NA, NA, output.predict[[2]]$temp.diff,NA), 
+                   ELB_tempdiff = output.predict[[3]]$temp.diff, 
+                   WLB_tempdiff = output.predict[[4]]$temp.diff)
 
 # Create a scatterplot matrix using ggpairs()
 sync2 |> pivot_longer(cols = 2:5) |> 
@@ -266,11 +310,17 @@ sync2 |> pivot_longer(cols = 2:5) |>
   scale_color_manual(values = c('#4477c9', '#e3dc10', '#b34f0c', '#4c944a')) +
   theme_bw(base_size = 9)
 
+# # Create a scatterplot matrix using ggpairs()
+# ggpairs(sync2, 
+#         title = "Scatterplot TempDiff Correlations",
+#         upper = list(continuous = wrap("cor", method="pearson", stars = FALSE)),
+#         lower = list(continuous = wrap("smooth", alpha = 1, size = 0.8))) +
+#         theme_minimal(base_size = 9)
+
+
 options(digits=2)
 correlation_table <- corrr::correlate(sync2, method = "pearson")
 correlation_table
-cor_2 <- rcorr(as.matrix(sync2[,-1]), type = 'pearson')
-cor_2
 
 ### Assess model fits 
 getCoeffs <- function(i, usefit) {

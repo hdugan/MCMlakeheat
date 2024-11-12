@@ -7,6 +7,8 @@ library(mgcv)
 library(marelac)
 library(wql)
 library(ggtext)
+library(scico)
+
 
 source('src/00_getCTD.R')
 source('src/00_gethypso.R')
@@ -37,13 +39,6 @@ ctd.join = ctd |>
 
 
 lakenames = c('West Lake Bonney', 'East Lake Bonney', 'Lake Fryxell','Lake Hoare')
-
-# a = ctd.join |> filter(location_name %in% c('West Lake Bonney', 'East Lake Bonney') & year %in% c(2002, 2003))
-# ggplot(a) +
-#   geom_point(aes(x = ctd_conductivity_mscm, y = depth.asl, group = as.factor(date_time), color = as.factor(date_time))) +
-#   ylab('Elevation (m asl)') + xlab('Temp (°C)') +
-#   theme_bw(base_size = 9) +
-#   facet_wrap(~location_name, scales = 'free')
 
 ########################## Create clean dataframe for lake ########################################
 
@@ -89,23 +84,23 @@ df.elb.clean = clean.ctd(lakename = 'East Lake Bonney') |>
 # Combine the four lakes 
 df.clean = df.lf.clean |> bind_rows(df.lh.clean, df.elb.clean, df.wlb.clean)
 
-# Check plots 
-p1 = ggplot(df.clean) +
-  geom_path(aes(x = ctd_temp_c, y = depth.asl, group = date_time, color = year(date_time))) +
-  ylab('Elevation (m asl)') + xlab('Temp (°C)') +
-  scale_colour_viridis_c(option = 'F', name = 'Year') +
-  theme_bw(base_size = 9) +
-  facet_wrap(~location_name, scales = 'free')
-
-p2 = ggplot(df.clean) +
-  geom_path(aes(x = ctd_conductivity_mscm, y = depth.asl, group = date_time, color = year(date_time))) +
-  ylab('Elevation (m asl)') + xlab('Cond (mS/cm)') +
-  scale_colour_viridis_c(option = 'F', name = 'Year') +
-  theme_bw(base_size = 9) +
-  facet_wrap(~location_name, scales = 'free')
-
-# Check plots
-p1 + p2 + plot_layout(guides = 'collect') 
+# # Check plots 
+# p1 = ggplot(df.clean) +
+#   geom_path(aes(x = ctd_temp_c, y = depth.asl, group = date_time, color = year(date_time))) +
+#   ylab('Elevation (m asl)') + xlab('Temp (°C)') +
+#   scale_colour_viridis_c(option = 'F', name = 'Year') +
+#   theme_bw(base_size = 9) +
+#   facet_wrap(~location_name, scales = 'free')
+# 
+# p2 = ggplot(df.clean) +
+#   geom_path(aes(x = ctd_conductivity_mscm, y = depth.asl, group = date_time, color = year(date_time))) +
+#   ylab('Elevation (m asl)') + xlab('Cond (mS/cm)') +
+#   scale_colour_viridis_c(option = 'F', name = 'Year') +
+#   theme_bw(base_size = 9) +
+#   facet_wrap(~location_name, scales = 'free')
+# 
+# # Check plots
+# p1 + p2 + plot_layout(guides = 'collect') 
 
 ##################### Add SpecCond and calculate salinity ########################
 
@@ -168,3 +163,135 @@ quantile(df.spcH$density_kg_m3)
 # Check Range
 df.spcH |> group_by(location_name) |> summarise(min(spHeat_J_kgK, na.rm = T), max(spHeat_J_kgK, na.rm = T))
 
+##################### Add lake ice thickness ########################
+df.full.ice = df.spcH |> 
+  left_join(ice.interp, by = join_by(date_time, location_name)) |> 
+  mutate(tempUse = if_else(depth.asl > ice.asl, NA, ctd_temp_c)) |> 
+  mutate(condUse = if_else(depth.asl > ice.asl, NA, ctd_conductivity_mscm)) |> 
+  mutate(isIce = if_else(depth.asl > ice.asl, TRUE, FALSE)) |> 
+  mutate(iceDensity_kgm3 = if_else(depth.asl > ice.asl, 900, NA)) |> 
+  mutate(location_name = factor(location_name, levels = c('Lake Fryxell','Lake Hoare', 'East Lake Bonney', 'West Lake Bonney'))) 
+
+###################### CTD PLOTS ########################
+# specHeatIce = 0.506 cal/degC/g # 2108 J/kgK
+# latentHeatIce = 70.8 cal/g (or 334000 J/kg)
+
+# The latent heat of fusion of ice is 33,600 joules per kilogram
+# latent heat of ice = density * thickness *  latent heat of ice (334000 J/kg)
+
+# for ice plotting
+toptemp = df.full.ice |> filter(!isIce) |> group_by(date_time, location_name) |> filter(depth.asl == max(depth.asl, na.rm = T)) |> 
+  select(location_name, date_time, depth.asl, ctd_temp_c, ctd_conductivity_mscm)
+icebox = df.full.ice |> filter(isIce == TRUE) |> group_by(location_name, date_time) |> 
+  summarise(min.depth = min(depth.asl), max.depth = max(depth.asl)) |> 
+  left_join(toptemp)
+
+# Check plot - temperature
+ct1 = ggplot(df.full.ice) +
+  geom_rect(data = icebox,
+            aes(xmin = ctd_temp_c, xmax = ctd_temp_c, ymin = max.depth, ymax = min.depth, group = year(date_time)), 
+            color = 'grey50',size = 0.3) +
+  geom_path(aes(x = tempUse, y = depth.asl, group = date_time, color = year(date_time))) +
+  ylab('Elevation (m asl)') + xlab('Temperature (°C)') +
+  scale_colour_viridis_c(option = 'F', name = 'Year') +
+  theme_bw(base_size = 9) +
+  facet_wrap(~location_name, scales = 'free', nrow = 1) +
+  new_scale_color() + 
+  geom_path(data = spigel_LF, aes(x = Temp_C, y = depth.asl, color = factor(year(date_time))), linewidth = 1) +
+  geom_path(data = hoare_LF, aes(x = Temp_C, y = depth.asl, color = factor(year(date_time))), linewidth = 1) +
+  geom_path(data = shirtcliffe_bonney_1963, aes(x = Temp_C, y = depth.asl), color = 'gold3', linewidth = 1) +
+  scale_color_manual(values = c('gold','gold3'), name = 'Year')
+
+# Check plot - conductivity
+ct2 = ggplot(df.full.ice) +
+  geom_rect(data = icebox,
+            aes(xmin = ctd_conductivity_mscm, xmax = ctd_conductivity_mscm, ymin = max.depth, ymax = min.depth, group = year(date_time)), 
+            color = 'grey50',size = 0.3) +
+  geom_path(aes(x = condUse, y = depth.asl, group = date_time, color = year(date_time))) +
+  ylab('Elevation (m asl)') + xlab('Conductivity (mS cm^-1 )') +
+  scale_colour_viridis_c(option = 'F', name = 'Year') +
+  theme_bw(base_size = 9) +
+  facet_wrap(~location_name, scales = 'free', nrow = 1) +
+  theme(axis.title.x = element_markdown())
+
+ct1 / ct2 + plot_layout(guides = 'collect') +
+  plot_annotation(tag_levels = 'a', tag_suffix = ')') &
+  theme(plot.tag = element_text(size = 8), legend.position = 'bottom', 
+        legend.key.width = unit(0.5, 'cm'), legend.key.height = unit(0.3, 'cm'),
+        legend.title = element_blank(),
+        legend.margin = margin(0, 0, 0, 0))
+ggsave('figures/Fig1_CTD.png', width = 6, height = 6, dpi = 500)
+
+
+# Figure 2: Same plot but of CTD changes 
+# Temperature and Conductivity Changes
+useprofile = df.full.ice |> 
+  group_by(location_name) |> 
+  # filter(date_time == first(date_time)) |> 
+  filter(date_time %in% as.Date(c('1995-10-15', '1995-11-07','1993-12-09'))) |> 
+  select(date_time, depth.asl, location_name, condUse, tempUse) |> 
+  rename(initialCond = condUse, initialTemp = tempUse, initialDate = date_time)
+
+diffprofile = df.full.ice |> select(depth.asl, location_name, condUse) |> 
+  left_join(useprofile) |> 
+  mutate(newCond = condUse - initialCond) |> 
+  filter(!is.na(newCond))
+
+c2 = ggplot(diffprofile) +
+  geom_path(aes(x = newCond, y = depth.asl, group = date_time, color = year(date_time))) +
+  ylab('Elevation (m asl)') + xlab('\u0394  Conductivity (mS cm^-1 )') +
+  scale_colour_viridis_c(option = 'F', name = 'Year') +
+  theme_bw(base_size = 9) +
+  theme(axis.title.x = element_markdown()) +
+  facet_wrap(~location_name, scales = 'free', nrow = 1)
+
+# Join
+diffprofile = df.full.ice |> select(depth.asl, location_name, tempUse) |> 
+  left_join(useprofile) |> 
+  mutate(newTemp = tempUse - initialTemp) |> 
+  filter(!is.na(newTemp))
+c1 = ggplot(diffprofile) +
+  geom_path(aes(x = newTemp, y = depth.asl, group = date_time, color = year(date_time))) +
+  ylab('Elevation (m asl)') + xlab('\u0394 Temperature (°C)') +
+  scale_colour_viridis_c(option = 'F', name = 'Year') +
+  theme_bw(base_size = 9) +
+  theme(axis.title.x = element_markdown()) +
+  facet_wrap(~location_name, scales = 'free', nrow = 1)
+
+diffprofile |> group_by(location_name) |> summarise(first(initialDate))
+
+c1 / c2 + plot_layout(guides = 'collect') +
+  plot_annotation(tag_levels = 'a', tag_suffix = ')') &
+  theme(plot.tag = element_text(size = 8), legend.position = 'bottom', 
+        legend.key.width = unit(0.5, 'cm'), legend.key.height = unit(0.3, 'cm'),
+        legend.title = element_blank(),
+        legend.margin = margin(0, 0, 0, 0))
+
+ggsave('figures/Fig2_CTDchange.png', width = 6, height = 6, dpi = 500)
+
+####  Sampling Days Plot ####
+df.full.ice |> 
+  group_by(location_name, date_time) |> 
+  summarise() |> 
+  mutate(fakeyear = `year<-`(date_time, 2024)) |> 
+  mutate(location_name = factor(location_name, levels = c('Lake Fryxell','Lake Hoare', 'East Lake Bonney', 'West Lake Bonney'))) |> 
+  ggplot() +
+  geom_tile(aes(x = fakeyear, y = year(date_time)), linewidth  = 200) +
+  theme_bw(base_size = 9) +
+  scale_y_continuous(breaks = seq(1993,2024, by = 2), name = 'Year') +
+  scale_x_date(date_labels = '%b', date_breaks = '2 months', name = 'Day') +
+  facet_wrap(~location_name) 
+
+ggsave('figures/SI_SamplingDays.png', width = 6, height = 4, dpi = 500)
+
+# Check plot - temperature
+ggplot(df.full.ice |> dplyr::filter(location_name %in% c('East Lake Bonney', 'West Lake Bonney'))) +
+  geom_rect(data = icebox |> dplyr::filter(location_name %in% c('East Lake Bonney', 'West Lake Bonney')),
+            aes(xmin = ctd_temp_c, xmax = ctd_temp_c, ymin = max.depth, ymax = min.depth, group = year(date_time)), 
+            color = 'grey50',size = 0.3) +
+  geom_path(aes(x = tempUse, y = depth.asl, group = date_time, color = year(date_time))) +
+  ylab('Elevation (m asl)') + xlab('Temperature (°C)') +
+  scale_colour_viridis_c(option = 'F', name = 'Year') +
+  theme_bw(base_size = 9) +
+  facet_wrap(~location_name, scales = 'free', ncol = 2)
+ggsave('figures/SI_LB.png', width = 6, height = 6, dpi = 500)

@@ -1,89 +1,5 @@
-# Load libraries
-library(tidyverse)
-library(lubridate)
-library(patchwork)
-library(scico)
-library(ggtext)
-
-# Run 01 first 
-source('src/00_getPAR.R')
-getKd = getKd |> 
-  summarise(kd.ice = mean(kd.ice, na.rm = T)) |> 
-  ungroup() |> 
-  filter(!is.na(kd.ice)) |> 
-  mutate(day2 = date_time + 2, day_2 = date_time - 2) |> 
-  select(-date_time)
-
-##################### Add lake ice thickness ########################
-df.full.ice = df.spcH |> 
-  left_join(ice.interp, by = join_by(date_time, location_name)) |> 
-  mutate(tempUse = if_else(depth.asl > ice.asl, NA, ctd_temp_c)) |> 
-  mutate(condUse = if_else(depth.asl > ice.asl, NA, ctd_conductivity_mscm)) |> 
-  mutate(isIce = if_else(depth.asl > ice.asl, TRUE, FALSE)) |> 
-  mutate(iceDensity_kgm3 = if_else(depth.asl > ice.asl, 900, NA)) |> 
-  mutate(location_name = factor(location_name, levels = c('Lake Fryxell','Lake Hoare', 'East Lake Bonney', 'West Lake Bonney'))) |> 
-  left_join(getKd, by = join_by(location_name, date_time <= day2, date_time >= day_2)) |> # Join in kd within 2 days
-  select(-day2, -day_2)
-
-
-# specHeatIce = 0.506 cal/degC/g # 2108 J/kgK
-# latentHeatIce = 70.8 cal/g (or 334000 J/kg)
-
-# The latent heat of fusion of ice is 33,600 joules per kilogram
-# latent heat of ice = density * thickness *  latent heat of ice (334000 J/kg)
-
-# for ice plotting
-toptemp = df.full.ice |> filter(!isIce) |> group_by(date_time, location_name) |> filter(depth.asl == max(depth.asl, na.rm = T)) |> 
-  select(location_name, date_time, depth.asl, ctd_temp_c, ctd_conductivity_mscm)
-icebox = df.full.ice |> filter(isIce == TRUE) |> group_by(location_name, date_time) |> 
-  summarise(min.depth = min(depth.asl), max.depth = max(depth.asl)) |> 
-  left_join(toptemp)
-
-# Check plot - temperature
-ct1 = ggplot(df.full.ice) +
-  geom_rect(data = icebox,
-            aes(xmin = ctd_temp_c, xmax = ctd_temp_c, ymin = max.depth, ymax = min.depth, group = year(date_time)), 
-            color = 'grey50',size = 0.3) +
-  geom_path(aes(x = tempUse, y = depth.asl, group = date_time, color = year(date_time))) +
-  ylab('Elevation (m asl)') + xlab('Temperature (°C)') +
-  scale_colour_viridis_c(option = 'F', name = 'Year') +
-  theme_bw(base_size = 9) +
-  facet_wrap(~location_name, scales = 'free', ncol = 1)
-
-# Check plot - conductivity
-ct2 = ggplot(df.full.ice) +
-  geom_rect(data = icebox,
-            aes(xmin = ctd_conductivity_mscm, xmax = ctd_conductivity_mscm, ymin = max.depth, ymax = min.depth, group = year(date_time)), 
-            color = 'grey50',size = 0.3) +
-  geom_path(aes(x = condUse, y = depth.asl, group = date_time, color = year(date_time))) +
-  ylab('Elevation (m asl)') + xlab('Conductivity (mS cm^-1 )') +
-  scale_colour_viridis_c(option = 'F', name = 'Year') +
-  theme_bw(base_size = 9) +
-  facet_wrap(~location_name, scales = 'free', ncol = 1) +
-  theme(axis.title.x = element_markdown())
-
-ct1 + ct2 + plot_layout(guides = 'collect') +
-  plot_annotation(tag_levels = 'a', tag_suffix = ')') &
-  theme(plot.tag = element_text(size = 8), legend.position = 'bottom', 
-        legend.key.width = unit(1, 'cm'), legend.key.height = unit(0.3, 'cm'),
-        legend.margin = margin(0, 0, 0, 0))
-ggsave('figures/Fig1_CTD.png', width = 6, height = 6, dpi = 500)
-
-
-# Check plot - temperature
-ggplot(df.full.ice |> dplyr::filter(location_name %in% c('East Lake Bonney', 'West Lake Bonney'))) +
-  geom_rect(data = icebox |> dplyr::filter(location_name %in% c('East Lake Bonney', 'West Lake Bonney')),
-            aes(xmin = ctd_temp_c, xmax = ctd_temp_c, ymin = max.depth, ymax = min.depth, group = year(date_time)), 
-            color = 'grey50',size = 0.3) +
-  geom_path(aes(x = tempUse, y = depth.asl, group = date_time, color = year(date_time))) +
-  ylab('Elevation (m asl)') + xlab('Temperature (°C)') +
-  scale_colour_viridis_c(option = 'F', name = 'Year') +
-  theme_bw(base_size = 9) +
-  facet_wrap(~location_name, scales = 'free', ncol = 2)
-ggsave('figures/SI_LB.png', width = 6, height = 6, dpi = 500)
 
 ##################### Add hypsometry ########################
-
 # Get hypsometry and create character elevation
 hypo.use = hypo_new |> 
   ungroup() |> 
@@ -103,7 +19,7 @@ max.depths = df.spcH %>%
 hypo.join = df.full.ice |> 
   filter(date_time %in% max.depths$date_time) %>% 
   left_join(hypo.use, by = join_by(depth.asl.char, location_name)) %>% 
-  mutate(temp_K = tempUse + 273.15) %>% 
+  mutate(temp_K = tempUse + 273.15) %>%
   mutate(spHeat_J_m3K = spHeat_J_kgK * density_kg_m3) %>% 
   # latent heat of ice = density * thickness *  latent heat of ice (334000 J/kg)
   mutate(LHice_J_m3 = iceDensity_kgm3 * 334000) |> 
@@ -115,23 +31,6 @@ hypo.join = df.full.ice |>
   mutate(volUse = if_else(depth.asl > ice.asl, NA, vol_layer_m3)) 
 # caloric content (Kelvin) of ice or water (avg temp x thickness x sp heat)
 
-
-# When did sampling take place? 
-hypo.join |> 
-  group_by(location_name, date_time) |> 
-  summarise() |> 
-  mutate(fakeyear = `year<-`(date_time, 2024)) |> 
-  mutate(location_name = factor(location_name, levels = c('Lake Fryxell','Lake Hoare', 'East Lake Bonney', 'West Lake Bonney'))) |> 
-  ggplot() +
-  geom_tile(aes(x = fakeyear, y = year(date_time)), linewidth  = 200) +
-  theme_bw(base_size = 9) +
-  scale_y_continuous(breaks = seq(1993,2024, by = 2), name = 'Year') +
-  scale_x_date(date_labels = '%b', date_breaks = '2 months', name = 'Day') +
-  facet_wrap(~location_name) 
-
-ggsave('figures/SI_SamplingDays.png', width = 6, height = 4, dpi = 500)
-
-
 ##################### Plot heat maps #####################
 makeHeat <- function(name, filllimits = c(NA,NA)) {
   ggplot(hypo.join %>% 
@@ -141,7 +40,7 @@ makeHeat <- function(name, filllimits = c(NA,NA)) {
     geom_tile(data = hypo.join %>% filter(location_name == name & isIce),
               aes(x = date_time, y = depth.asl), fill = 'grey80', width = 150, height = 0.1) +
     scale_fill_scico(palette = 'roma', direction = -1, name = 'MJ/m2', limits = filllimits, na.value = 'black') +
-    labs(title = name) +
+    labs(subtitle = name) +
     ylab('Depth asl (m)') +
     theme_bw(base_size = 9) +
     theme(axis.title.x = element_blank(),
@@ -149,12 +48,12 @@ makeHeat <- function(name, filllimits = c(NA,NA)) {
           legend.key.width = unit(0.2,'cm'))
 }
 
-h1 = makeHeat('Lake Fryxell', filllimits = c(114.5,117))
-h2 = makeHeat('Lake Hoare', filllimits = c(114.5,117))
-h3 = makeHeat('East Lake Bonney', filllimits = c(114.5,117)) + ylim(45, NA)
-h4 = makeHeat('West Lake Bonney', filllimits = c(114.5,117)) + ylim(45, NA)
+h1.epi = makeHeat('Lake Fryxell', filllimits = c(114.5,117))
+h2.epi = makeHeat('Lake Hoare', filllimits = c(114.5,117))
+h3.epi = makeHeat('East Lake Bonney', filllimits = c(114.5,117)) + ylim(45, NA)
+h4.epi = makeHeat('West Lake Bonney', filllimits = c(114.5,117)) + ylim(45, NA)
 
-h1 + h2 + h3 + h4 + plot_layout(guides = 'collect')
+h1.epi + h2.epi + h3.epi + h4.epi + plot_layout(guides = 'collect')
 ggsave('figures/Fig3_HeatContent_epi.png', width = 6, height = 4, dpi = 500)
 
 h1 = makeHeat('Lake Fryxell')
@@ -226,3 +125,56 @@ hypo.fill = hypo.join |>
                                  location_name == 'Lake Hoare' ~ 58)) |> 
   filter(depth.asl >= cutoffDepth) 
 
+# Summarise by day 
+heat.day = hypo.fill |> 
+  mutate(tempV = tempUse * vol_layer_m3) |> 
+  summarise(ice.approx = mean(ice.approx, na.rm = T), heat_J = sum(heat_J, na.rm = T), heatIce_J = sum(heatIce_J, na.rm = T), 
+            Area_2D = first(Area_2D), vol = sum(volUse, na.rm = T), LL = first(masl.approx), 
+            tempV = sum(tempV, na.rm = T)/vol, tempUse = mean(tempUse, na.rm = T),
+  ) |> 
+  mutate(heatTot_J_m2 = (heat_J - heatIce_J)/Area_2D) |> 
+  ungroup() |> 
+  mutate(location_name = factor(location_name, levels = c('Lake Fryxell','Lake Hoare', 'East Lake Bonney', 'West Lake Bonney'))) |> 
+  mutate(dec.date = decimal_date(date_time), yday = yday(date_time)) |> 
+  mutate(yday = if_else(yday > 200, yday, yday+365)) |> 
+  filter(month(date_time) >= 10) |> 
+  mutate(tempUse = if_else(location_name == 'West Lake Bonney' & year(date_time) == 2005, NA, tempUse))
+
+######### Plot timeseries ##########
+h.ts = ggplot(heat.day) +
+  geom_smooth(aes(x = date_time, y = heatTot_J_m2/1e6, color = location_name), method = 'gam') +
+  geom_point(aes(x = date_time, y = heatTot_J_m2/1e6, fill = location_name), shape = 21, stroke = 0.2) +
+  scale_color_manual(values = c('#4477c9', '#e3dc10', '#b34f0c', '#4c944a'), name = 'Lake') +
+  scale_fill_manual(values = c('#4477c9', '#e3dc10', '#b34f0c', '#4c944a'), name = 'Lake') +
+  ylab('Heat storage (MJ m^2 )') +
+  theme_bw(base_size = 9) +
+  theme(axis.title.x = element_blank(),
+        axis.title.y = element_markdown(),
+        legend.position = 'bottom',
+        legend.title = element_blank(),
+        legend.text = element_text(size = 7),
+        legend.key.size = unit(0.2,'cm'),
+        legend.margin = margin(0, 0, 0, 0))
+
+ggsave('figures/Fig2_Heat_TimeSeries.png', width = 4, height = 2.5, dpi = 500)
+
+(h1.epi + h2.epi + h3.epi + h4.epi + plot_layout(guides = 'collect')) 
+
+# Combine heat plots 
+layout <- "
+AA
+AA
+BB
+"
+(h1.epi + h2.epi + h3.epi + h4.epi + plot_layout(guides = 'collect')) / h.ts +
+  plot_layout(design = layout) + plot_annotation(tag_levels = 'a', tag_suffix = ')') &
+  theme(plot.tag = element_text(size = 8))
+
+ggsave('figures/Fig3_HeatContent.png', width = 6, height = 5, dpi = 500)
+
+# Output heat data. 
+write_csv(heat.day, 'dataout/MDVLakes_dailyHeatStorage.csv')
+
+# results for paper 
+heat.day |> group_by(location_name) |> 
+  summarise(min(heatTot_J_m2/1e6), max(heatTot_J_m2/1e6))

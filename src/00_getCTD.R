@@ -7,10 +7,12 @@ library(ggnewscale)
 source('src/00_getLakeLevels.R')
 
 # Older data 
+# A sun-heated antarctic lake
 shirtcliffe_bonney_1963 = read_csv('datain/papers/shirtcliffe_bonney_1963.csv') |> 
   mutate(depth.asl = (62.2-4) - depth_m) |> 
   mutate(location_name = 'East Lake Bonney') |> 
-  mutate(date_time = as.Date('1963-11-01'))
+  mutate(date_time = as.Date('1963-11-01')) |> 
+  mutate(location_name = factor(location_name, levels = c('Lake Fryxell','Lake Hoare', 'East Lake Bonney', 'West Lake Bonney')))
 
 spigel_ELB = read_csv('datain/papers/Spigel_Oct_1991_ELB.csv') |> 
   mutate(location_name = 'East Lake Bonney') |> 
@@ -28,12 +30,16 @@ spigel_LF = read_csv('datain/papers/Spigel_Jan_1991_LF.csv') |>
   mutate(location_name = 'Lake Fryxell') |> 
   mutate(date_time = as.Date('1991-01-26')) |> #actually Jan 21, using 26 for lake level 
   left_join(ll.interp, by = join_by(location_name, date_time)) |>  # Join by masl 
-  mutate(depth.asl = masl.approx - depth_m)
+  mutate(depth.asl = masl.approx - depth_m) |> 
+  mutate(location_name = factor(location_name, levels = c('Lake Fryxell','Lake Hoare', 'East Lake Bonney', 'West Lake Bonney')))
 
+# Solar heating of Lake Fryxell, a permanently ice-covered Antarctic lake
 hoare_LF = read_csv('datain/papers/Hoare_Nov_1963.csv') |> 
   mutate(location_name = 'Lake Fryxell') |> 
   mutate(date_time = as.Date('1963-11-20')) |> #Late november
-  mutate(depth.asl = (17.5-1.9) - depth_m)
+  mutate(depth.asl = (17.5-1.9) - depth_m) |> 
+  mutate(location_name = factor(location_name, levels = c('Lake Fryxell','Lake Hoare', 'East Lake Bonney', 'West Lake Bonney')))
+  
 # Chinn [1993] presents comparisonsfor all lakes that show increases in water levels between 1974 and 1990
 # 4 meters for Lake Bonney
 # 1.9 meters for Lake Fryxell 
@@ -45,7 +51,17 @@ hoare_LF = read_csv('datain/papers/Hoare_Nov_1963.csv') |>
 # Package ID: knb-lter-mcm.88.17 Cataloging System:https://pasta.edirepository.org.
 inUrl1  <- "https://pasta.lternet.edu/package/data/eml/knb-lter-mcm/88/17/91474a205d3dd99cc794f8510d2d99c5" 
 infile1 <- tempfile()
-download.file(inUrl1,infile1,method="curl")
+
+# Attempt to download the file from EDI, if not locally
+infile1 = tryCatch(
+  expr = {
+    download.file(inUrl1,infile1,method="curl")
+  },
+  error = function(e) {  # If download fails, read the local file
+    message('Caught an error!')
+    return('datain/mcm_lter/mcmlter-lake-ctd-20231023.csv')
+  }
+)
 
 # Read in 2023 data (will be online soon)
 ctd2023 = read_csv('datain/ctd_2023.csv')

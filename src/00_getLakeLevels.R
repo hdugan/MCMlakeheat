@@ -11,7 +11,17 @@ source('src/00_gethypso.R')
 
 inUrl1  <- "https://pasta.lternet.edu/package/data/eml/knb-lter-mcm/68/13/76751b6f6ffa289845a830d6581d52fe" 
 infile1 <- tempfile()
-download.file(inUrl1,infile1,method="curl")
+
+# Attempt to download the file from EDI, if not locally
+infile1 = tryCatch(
+  expr = {
+  download.file(inUrl1,infile1,method="curl")
+  },
+  error = function(e) {  # If download fails, read the local file
+    message('Caught an error!')
+    return('datain/mcm_lter/mcmlter-lake-levels-20230726.csv')
+  }
+)
 
 ll2023 = read_csv('datain/ll_2023.csv')
 
@@ -58,7 +68,17 @@ ll.interp = expand_grid(date_time = seq.Date(as.Date('1991-01-26'), as.Date('202
 # Package ID: knb-lter-mcm.67.14 Cataloging System:https://pasta.edirepository.org.
 inUrl1  <- "https://pasta.lternet.edu/package/data/eml/knb-lter-mcm/67/14/204ecca57a10a759532ba520376433ab" 
 infile1 <- tempfile()
-download.file(inUrl1,infile1,method="curl")
+
+# Attempt to download the file from EDI, if not locally
+infile1 = tryCatch(
+  expr = {
+    download.file(inUrl1,infile1,method="curl")
+  },
+  error = function(e) {  # If download fails, read the local file
+    message('Caught an error!')
+    return('datain/mcm_lter/mcmlter-lake-ice_thickness-20230726.csv')
+  }
+)
 
 # Get 2023 ice thickness (will be online soon)
 ice2023 = read_csv('datain/ice_2023.csv')
