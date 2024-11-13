@@ -53,8 +53,12 @@ for (i in 1:4) {
                  data = heat.day |> filter(location_name == uselake))
   mod.vol <- gam(vol ~ s(dec.date, k = usek, bs = 'tp'),
                   data = heat.day |> filter(location_name == uselake))
-  mod.LL <- gam(LL ~ s(dec.date, k = usek, bs = 'tp'), 
-                 data = heat.day |> filter(location_name == uselake))
+  # mod.LL <- gam(LL ~ s(dec.date, k = usek, bs = 'tp'), 
+  #                data = heat.day |> filter(location_name == uselake))
+  
+  ll.dec = ll |> mutate(dec.date = decimal_date(date_time)) |> filter(month(date_time) >= 10)
+  mod.LL = gam(masl ~ s(dec.date, k = 25, bs = 'tp'), 
+      data = ll.dec |> filter(location_name == uselake))
   
   summary(mod.ice)
   summary(mod.temp)
@@ -217,33 +221,12 @@ ggsave(paste0('figures/Fig4_GAMS.png'), width = 6.5, height = 8.5, dpi = 500)
 
 ################ Synchrony between timeseries #################
 
-sync1 = data.frame(date_time = output.predict[[3]]$date_time, 
-                   LF_temp = c(NA, NA,output.predict[[1]]$fit.temp), 
-              LH_temp = c(NA, NA, output.predict[[2]]$fit.temp,NA), 
-              ELB_temp = output.predict[[3]]$fit.temp, 
-              WLB_temp = output.predict[[4]]$fit.temp)
-
-# Create a scatterplot matrix using ggpairs()
-sync1 |> pivot_longer(cols = 2:5) |> 
-  ggplot() +
-  geom_path(aes(x = date_time, y = value, col = name)) +
-  ylab('Temp (°C)') +
-  scale_color_manual(values = usecolors) +
-  theme_bw(base_size = 9)
-
-options(digits=2)
-correlation_table <- corrr::correlate(sync1, method = "pearson")
-correlation_table
-
-cor_2 <- rcorr(as.matrix(sync1[,-1]), type = 'pearson')
-cor_2
-
 #Syncrony between timeseries of ice thickness
-sync2 = data.frame(date_time = output.predict[[3]]$date_time, 
-                   LF_ice = c(NA, NA,output.predict[[1]]$fit.ice), 
-                   LH_ice = c(NA, NA, output.predict[[2]]$fit.ice,NA), 
-                   ELB_ice = output.predict[[3]]$fit.ice, 
-                   WLB_ice = output.predict[[4]]$fit.ice)
+sync2 = data.frame(date_time = output.predict.dec[[3]]$date_time, 
+                   LF_ice = c(NA, NA,output.predict.dec[[1]]$fit.ice), 
+                   LH_ice = c(NA, NA, output.predict.dec[[2]]$fit.ice,NA), 
+                   ELB_ice = output.predict.dec[[3]]$fit.ice, 
+                   WLB_ice = output.predict.dec[[4]]$fit.ice)
 
 # Create a scatterplot matrix using ggpairs()
 sync2 |> pivot_longer(cols = 2:5) |> 
@@ -252,12 +235,6 @@ sync2 |> pivot_longer(cols = 2:5) |>
   ylab('Temp Diff (°C)') +
   scale_color_manual(values = usecolors) +
   theme_bw(base_size = 9)
-
-options(digits=2)
-correlation_table <- corrr::correlate(sync2, method = "pearson")
-correlation_table
-cor_2 <- rcorr(as.matrix(sync2[,-1]), type = 'pearson')
-cor_2
 
 ################ Assess model fits #################
 getCoeffs <- function(i, usefit) {
@@ -345,50 +322,22 @@ latexTable(coeffs_fit2, usecols = 6)
 ################################ Variable-lag Granger Causality ################################
 for (i in 1:4) {
   print(i)
-  print(VLTimeCausality::VLGrangerFunc(Y = output.predict[[i]]$fit.temp, X = output.predict[[i]]$fit.ice, gamma = 0.5)$XgCsY)
-  print(VLTimeCausality::VLGrangerFunc(Y = output.predict[[i]]$fit.temp, X = output.predict[[i]]$fit.LL, gamma = 0.5)$XgCsY)
-  print(VLTimeCausality::VLGrangerFunc(Y = output.predict[[i]]$fit.temp, X = output.predict[[i]]$fit.vol, gamma = 0.5)$XgCsY)
-  print(VLTimeCausality::VLGrangerFunc(Y = output.predict[[i]]$fit.temp, X = output.predict[[i]]$ice.diff, gamma = 0.5)$XgCsY)
-  print(VLTimeCausality::VLGrangerFunc(Y = output.predict[[i]]$fit.temp, X = output.predict[[i]]$LL.diff, gamma = 0.5)$XgCsY)
-  print(VLTimeCausality::VLGrangerFunc(Y = output.predict[[i]]$fit.temp, X = output.predict[[i]]$vol.diff, gamma = 0.5)$XgCsY)
+  print(VLTimeCausality::VLGrangerFunc(Y = output.predict.dec[[i]]$fit.temp, X = output.predict.dec[[i]]$fit.ice, gamma = 0.5)$XgCsY)
+  print(VLTimeCausality::VLGrangerFunc(Y = output.predict.dec[[i]]$fit.temp, X = output.predict.dec[[i]]$fit.LL, gamma = 0.5)$XgCsY)
+  print(VLTimeCausality::VLGrangerFunc(Y = output.predict.dec[[i]]$fit.temp, X = output.predict.dec[[i]]$ice.diff, gamma = 0.5)$XgCsY)
+  print(VLTimeCausality::VLGrangerFunc(Y = output.predict.dec[[i]]$fit.temp, X = output.predict.dec[[i]]$LL.diff, gamma = 0.5)$XgCsY)
+
 }
 
 for (i in 1:4) {
   print(i)
-  print(VLTimeCausality::VLGrangerFunc(Y = output.predict[[i]]$fit.temp, X = output.predict[[i]]$fit.ice, gamma = 0.5)$XgCsY)
-  print(VLTimeCausality::VLGrangerFunc(Y = output.predict[[i]]$fit.temp, X = lead(output.predict[[i]]$fit.ice), gamma = 0.5)$XgCsY)
+  print(VLTimeCausality::VLGrangerFunc(Y = output.predict.dec[[i]]$fit.temp, X = output.predict.dec[[i]]$fit.ice, gamma = 0.5)$XgCsY)
+  print(VLTimeCausality::VLGrangerFunc(Y = output.predict.dec[[i]]$fit.temp, X = lead(output.predict.dec[[i]]$fit.ice), gamma = 0.5)$XgCsY)
 }
 
 for (i in 1:4) {
   print(i)
-  print(VLTimeCausality::VLGrangerFunc(Y = output.predict[[i]]$temp.diff, X = output.predict[[i]]$fit.ice, gamma = 0.5)$XgCsY)
-  print(VLTimeCausality::VLGrangerFunc(Y = output.predict[[i]]$temp.diff, X = lead(output.predict[[i]]$fit.ice), gamma = 0.5)$XgCsY)
-}
-
-#### Autocorrelation in timeseries ####
-for (i in 1:4) {
-  uselake = lakecolor$uselake[i]
-  nrows = length(output.predict[[i]]$temp.diff)
-  print(acf(output.predict[[i]]$temp.diff, main = uselake, ci = 0.99))
-  # Compute confidence interval 
-  # Use 95 or 99% confidence? 
-  ci = qnorm((1 + 0.99)/2)/sqrt(nrows)
-  
-  sig = acf(output.predict[[i]]$temp.diff, plot = F)$acf[2] > ci
-  print(paste0(uselake, ' acf temp.diff: ', sig))
- 
-}
-
-for (i in 1:4) {
-  uselake = lakecolor$uselake[i]
-  nrows = length(output.predict[[i]]$ice.diff)
-  print(acf(output.predict[[i]]$ice.diff, main = uselake, ci = 0.99))
-  # Compute confidence interval 
-  # Use 95 or 99% confidence? 
-  ci = qnorm((1 + 0.99)/2)/sqrt(nrows)
-  
-  sig = acf(output.predict[[i]]$ice.diff, plot = F)$acf[2] > ci
-  print(paste0(uselake, ' acf ice.diff: ', sig))
-  # print(pacf(output.predict[[i]]$ice.diff, main = lakecolor$uselake[i]))
+  print(VLTimeCausality::VLGrangerFunc(Y = output.predict.dec[[i]]$temp.diff, X = output.predict.dec[[i]]$fit.ice, gamma = 0.5)$XgCsY)
+  print(VLTimeCausality::VLGrangerFunc(Y = output.predict.dec[[i]]$temp.diff, X = lead(output.predict.dec[[i]]$fit.ice), gamma = 0.5)$XgCsY)
 }
 
