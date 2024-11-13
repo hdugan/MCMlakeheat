@@ -193,7 +193,7 @@ ct1 = ggplot(df.full.ice) +
             color = 'grey50',size = 0.3) +
   geom_path(aes(x = tempUse, y = depth.asl, group = date_time, color = year(date_time))) +
   ylab('Elevation (m asl)') + xlab('Temperature (°C)') +
-  scale_colour_viridis_c(option = 'F', name = 'Year') +
+  scale_color_scico(palette = 'bilbao', name = 'Year') +
   theme_bw(base_size = 9) +
   facet_wrap(~location_name, scales = 'free', nrow = 1) +
   new_scale_color() + 
@@ -209,7 +209,7 @@ ct2 = ggplot(df.full.ice) +
             color = 'grey50',size = 0.3) +
   geom_path(aes(x = condUse, y = depth.asl, group = date_time, color = year(date_time))) +
   ylab('Elevation (m asl)') + xlab('Conductivity (mS cm^-1 )') +
-  scale_colour_viridis_c(option = 'F', name = 'Year') +
+  scale_color_scico(palette = 'bilbao', name = 'Year') +
   theme_bw(base_size = 9) +
   facet_wrap(~location_name, scales = 'free', nrow = 1) +
   theme(axis.title.x = element_markdown())
@@ -240,7 +240,7 @@ diffprofile = df.full.ice |> select(depth.asl, location_name, condUse) |>
 c2 = ggplot(diffprofile) +
   geom_path(aes(x = newCond, y = depth.asl, group = date_time, color = year(date_time))) +
   ylab('Elevation (m asl)') + xlab('\u0394  Conductivity (mS cm^-1 )') +
-  scale_colour_viridis_c(option = 'F', name = 'Year') +
+  scale_color_scico(palette = 'bilbao', name = 'Year') +
   theme_bw(base_size = 9) +
   theme(axis.title.x = element_markdown()) +
   facet_wrap(~location_name, scales = 'free', nrow = 1)
@@ -253,10 +253,10 @@ diffprofile = df.full.ice |> select(depth.asl, location_name, tempUse) |>
 c1 = ggplot(diffprofile) +
   geom_path(aes(x = newTemp, y = depth.asl, group = date_time, color = year(date_time))) +
   ylab('Elevation (m asl)') + xlab('\u0394 Temperature (°C)') +
-  scale_colour_viridis_c(option = 'F', name = 'Year') +
+  scale_color_scico(palette = 'bilbao', name = 'Year') +
   theme_bw(base_size = 9) +
   theme(axis.title.x = element_markdown()) +
-  facet_wrap(~location_name, scales = 'free', nrow = 1)
+  facet_wrap(~location_name, scales = 'free', nrow = 1); c1
 
 diffprofile |> group_by(location_name) |> summarise(first(initialDate))
 

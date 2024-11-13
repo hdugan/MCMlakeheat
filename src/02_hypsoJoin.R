@@ -1,3 +1,5 @@
+usecolors =  c('#4477c9', '#e3dc10', '#b34f0c', '#4c944a')
+usecolors = c("#BB9F2F", "#94B9AF", "#942911", "#593837")
 
 ##################### Add hypsometry ########################
 # Get hypsometry and create character elevation
@@ -26,6 +28,7 @@ hypo.join = df.full.ice |>
   mutate(heatIce_J = LHice_J_m3 * vol_layer_m3) |> 
   mutate(heat_J = spHeat_J_m3K * vol_layer_m3 * temp_K) %>% 
   mutate(heat_J_m2 = heat_J/Area_2D) |> 
+  mutate(heat_J_m3 = heat_J/vol_layer_m3) |> 
   # mutate(heat_J_m2 = if_else(Area_2D == 0, 0, heat_J_m2)) |> 
   ungroup() |> 
   mutate(volUse = if_else(depth.asl > ice.asl, NA, vol_layer_m3)) 
@@ -36,22 +39,23 @@ makeHeat <- function(name, filllimits = c(NA,NA)) {
   ggplot(hypo.join %>% 
            filter(month(date_time) %in% c(11,12,1)) |> 
            filter(location_name == name)) + 
-    geom_tile(aes(x = date_time, y = depth.asl, fill = heat_J_m2/1e6), width = 150,height = 0.1) +
+    geom_tile(aes(x = date_time, y = depth.asl, fill = heat_J_m3/1e6), width = 150,height = 0.1) +
     geom_tile(data = hypo.join %>% filter(location_name == name & isIce),
               aes(x = date_time, y = depth.asl), fill = 'grey80', width = 150, height = 0.1) +
-    scale_fill_scico(palette = 'roma', direction = -1, name = 'MJ/m2', limits = filllimits, na.value = 'black') +
+    scale_fill_scico(palette = 'vik', direction = 1, name = 'MJ m^-3', limits = filllimits, na.value = 'black') +
     labs(subtitle = name) +
     ylab('Depth asl (m)') +
     theme_bw(base_size = 9) +
     theme(axis.title.x = element_blank(),
           legend.text = element_text(size = 7),
-          legend.key.width = unit(0.2,'cm'))
+          legend.key.width = unit(0.2,'cm'),
+          legend.title = element_markdown())
 }
 
-h1.epi = makeHeat('Lake Fryxell', filllimits = c(114.5,117))
-h2.epi = makeHeat('Lake Hoare', filllimits = c(114.5,117))
-h3.epi = makeHeat('East Lake Bonney', filllimits = c(114.5,117)) + ylim(45, NA)
-h4.epi = makeHeat('West Lake Bonney', filllimits = c(114.5,117)) + ylim(45, NA)
+h1.epi = makeHeat('Lake Fryxell', filllimits = c(1145,1170))
+h2.epi = makeHeat('Lake Hoare', filllimits = c(1145,1170))
+h3.epi = makeHeat('East Lake Bonney', filllimits = c(1145,1170)) + ylim(45, NA)
+h4.epi = makeHeat('West Lake Bonney', filllimits = c(1145,1170)) + ylim(45, NA)
 
 h1.epi + h2.epi + h3.epi + h4.epi + plot_layout(guides = 'collect')
 ggsave('figures/Fig3_HeatContent_epi.png', width = 6, height = 4, dpi = 500)
@@ -144,9 +148,9 @@ heat.day = hypo.fill |>
 h.ts = ggplot(heat.day) +
   geom_smooth(aes(x = date_time, y = heatTot_J_m2/1e6, color = location_name), method = 'gam') +
   geom_point(aes(x = date_time, y = heatTot_J_m2/1e6, fill = location_name), shape = 21, stroke = 0.2) +
-  scale_color_manual(values = c('#4477c9', '#e3dc10', '#b34f0c', '#4c944a'), name = 'Lake') +
-  scale_fill_manual(values = c('#4477c9', '#e3dc10', '#b34f0c', '#4c944a'), name = 'Lake') +
-  ylab('Heat storage (MJ m^2 )') +
+  scale_color_manual(values = usecolors, name = 'Lake') +
+  scale_fill_manual(values = usecolors, name = 'Lake') +
+  ylab('Heat storage (MJ m^-2 )') +
   theme_bw(base_size = 9) +
   theme(axis.title.x = element_blank(),
         axis.title.y = element_markdown(),
@@ -178,3 +182,6 @@ write_csv(heat.day, 'dataout/MDVLakes_dailyHeatStorage.csv')
 # results for paper 
 heat.day |> group_by(location_name) |> 
   summarise(min(heatTot_J_m2/1e6), max(heatTot_J_m2/1e6))
+
+hypo.join |> group_by(location_name) |> 
+  summarise(minHeat = min(heat_J_m3/1e6, na.rm = T), maxHeat = max(heat_J_m3/1e6, na.rm = T))

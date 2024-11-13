@@ -11,9 +11,11 @@ library(olsrr) #collinearity
 library(Hmisc) #correlation matrix w/ Sig
 
 #!!!! 2005 data from WLB hypo looks too warm
+usecolors =  c('#4477c9', '#e3dc10', '#b34f0c', '#4c944a')
+usecolors = c("#BB9F2F", "#94B9AF", "#942911", "#593837")
 
 lakecolor = data.frame(uselake = c('Lake Fryxell','Lake Hoare', 'East Lake Bonney', 'West Lake Bonney'), 
-           plotColor = c('#4477c9', '#e3dc10', '#b34f0c', '#4c944a'), 
+           plotColor = usecolors, 
            k = c(30,30,30,30))
 
 output.plots = list()
@@ -139,22 +141,25 @@ for (i in 1:4) {
 full.predict = bind_rows(output.predict) |> 
   mutate(location_name = factor(location_name, levels = c('Lake Fryxell','Lake Hoare', 'East Lake Bonney', 'West Lake Bonney'))) 
 full.predict.dec = bind_rows(output.predict.dec) |> 
-  mutate(location_name = factor(location_name, levels = c('Lake Fryxell','Lake Hoare', 'East Lake Bonney', 'West Lake Bonney'))) |> 
+  mutate(location_name = factor(location_name, levels = c('Lake Fryxell','Lake Hoare', 'East Lake Bonney', 'West Lake Bonney'))) 
 
 plotCustom = list(  scale_colour_grey(),
-                    scale_fill_manual(values = c('#4477c9', '#e3dc10', '#b34f0c', '#4c944a')),
+                    scale_fill_manual(values = usecolors),
                     theme_bw(base_size = 9),
                     facet_wrap(~location_name, scales = 'free_y', nrow = 1),
                     theme(axis.title.x = element_blank(),
                           legend.position = 'none',
-                          legend.title = element_blank()))
+                          legend.title = element_blank(),
+                          strip.background = element_rect(fill = "white", color = NA),  # Set background to white and remove border
+                          strip.text = element_text(color = "black", face = "bold", size = 10))
+                    )
 
 p1 = ggplot(full.predict, aes(x = dec.date, y = fit.temp)) +
   geom_ribbon(aes(ymin = lower.temp, ymax = upper.temp, x = dec.date, fill = location_name), alpha = 0.5,
               inherit.aes = FALSE) +
   geom_point(data = heat.day, 
              mapping = aes(x = dec.date, y = tempUse, color = factor(month(date_time))),
-             inherit.aes = FALSE) +
+             inherit.aes = FALSE, size = 0.6) +
   geom_line() +
   labs(y = "Mean Temp (°C)") +
   plotCustom
@@ -164,7 +169,7 @@ p2 = ggplot(full.predict, aes(x = dec.date, y = fit.ice)) +
               inherit.aes = FALSE) +
   geom_point(data = heat.day , 
              mapping = aes(x = dec.date, y = ice.approx, color = factor(month(date_time))),
-             inherit.aes = FALSE) +
+             inherit.aes = FALSE, size = 0.6) +
   geom_line() +
   labs(y = "Ice Thickness (m)") +
   plotCustom + 
@@ -175,7 +180,7 @@ p3 = ggplot(full.predict, aes(x = dec.date, y = fit.LL)) +
               inherit.aes = FALSE) +
   geom_point(data = heat.day, 
              mapping = aes(x = dec.date, y = LL, color = factor(month(date_time))),
-             inherit.aes = FALSE) +
+             inherit.aes = FALSE, size = 0.6) +
   geom_line() +
   geom_ribbon(aes(ymin = lower.LL + lower.ice, ymax = upper.LL + upper.ice, x = dec.date, fill = location_name), alpha = 0.5,
               inherit.aes = FALSE) +
@@ -188,18 +193,21 @@ p3 = ggplot(full.predict, aes(x = dec.date, y = fit.LL)) +
 p5 = ggplot(full.predict.dec) +
   geom_col(aes(x = date_time, y = temp.diff, fill = location_name)) +
   ylab('Temp Diff (°C)') +
+  ylim(-0.3,0.34) +
   plotCustom + 
   theme(strip.background = element_blank(), strip.text.x = element_blank())
 
 p6 = ggplot(full.predict.dec) +
   geom_col(aes(x = date_time, y = ice.diff, fill = location_name)) +
   ylab('Ice Diff (°C)') +
+  ylim(-0.65,1.5) +
   plotCustom + 
   theme(strip.background = element_blank(), strip.text.x = element_blank())
 
 p7 = ggplot(full.predict.dec) +
   geom_col(aes(x = date_time, y = LL.diff, fill = location_name)) +
   ylab('LL Diff (°C)') +
+  ylim(-0.3,0.58) +
   plotCustom + 
   theme(strip.background = element_blank(), strip.text.x = element_blank())
 
@@ -220,7 +228,7 @@ sync1 |> pivot_longer(cols = 2:5) |>
   ggplot() +
   geom_path(aes(x = date_time, y = value, col = name)) +
   ylab('Temp (°C)') +
-  scale_color_manual(values = c('#4477c9', '#e3dc10', '#b34f0c', '#4c944a')) +
+  scale_color_manual(values = usecolors) +
   theme_bw(base_size = 9)
 
 options(digits=2)
@@ -242,7 +250,7 @@ sync2 |> pivot_longer(cols = 2:5) |>
   ggplot() +
   geom_path(aes(x = date_time, y = value, col = name)) +
   ylab('Temp Diff (°C)') +
-  scale_color_manual(values = c('#4477c9', '#e3dc10', '#b34f0c', '#4c944a')) +
+  scale_color_manual(values = usecolors) +
   theme_bw(base_size = 9)
 
 options(digits=2)
