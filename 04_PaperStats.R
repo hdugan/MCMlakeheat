@@ -195,3 +195,26 @@ for (i in 1:4) {
   sig = acf(output.predict.dec[[i]]$LL.diff, plot = F)$acf[2] > ci
   print(paste0(uselake, ' acf ll.diff: ', sig))
 }
+
+################################ Variable-lag Granger Causality ################################
+for (i in 1:4) {
+  print(i)
+  print(VLTimeCausality::VLGrangerFunc(Y = output.predict.dec[[i]]$fit.temp, X = output.predict.dec[[i]]$fit.ice, gamma = 0.5)$XgCsY)
+  print(VLTimeCausality::VLGrangerFunc(Y = output.predict.dec[[i]]$fit.temp, X = output.predict.dec[[i]]$fit.LL, gamma = 0.5)$XgCsY)
+  print(VLTimeCausality::VLGrangerFunc(Y = output.predict.dec[[i]]$fit.temp, X = output.predict.dec[[i]]$ice.diff, gamma = 0.5)$XgCsY)
+  print(VLTimeCausality::VLGrangerFunc(Y = output.predict.dec[[i]]$fit.temp, X = output.predict.dec[[i]]$LL.diff, gamma = 0.5)$XgCsY)
+  
+}
+
+for (i in 1:4) {
+  print(i)
+  print(VLTimeCausality::VLGrangerFunc(Y = output.predict.dec[[i]]$fit.temp, X = output.predict.dec[[i]]$fit.ice, gamma = 0.5)$XgCsY)
+  print(VLTimeCausality::VLGrangerFunc(Y = output.predict.dec[[i]]$fit.temp, X = lead(output.predict.dec[[i]]$fit.ice), gamma = 0.5)$XgCsY)
+}
+
+for (i in 1:4) {
+  print(i)
+  print(VLTimeCausality::VLGrangerFunc(Y = output.predict.dec[[i]]$temp.diff, X = output.predict.dec[[i]]$fit.ice, gamma = 0.5)$XgCsY)
+  print(VLTimeCausality::VLGrangerFunc(Y = output.predict.dec[[i]]$temp.diff, X = lead(output.predict.dec[[i]]$fit.ice), gamma = 0.5)$XgCsY)
+}
+

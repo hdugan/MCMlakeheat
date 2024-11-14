@@ -16,7 +16,7 @@ usecolors = c("#BB9F2F", "#94B9AF", "#942911", "#593837")
 
 lakecolor = data.frame(uselake = c('Lake Fryxell','Lake Hoare', 'East Lake Bonney', 'West Lake Bonney'), 
            plotColor = usecolors, 
-           k = c(30,30,30,30))
+           k = c(30,30,30,50))
 
 output.plots = list()
 output.fit1 = list()
@@ -121,22 +121,23 @@ for (i in 1:4) {
   
   ########################################### FIT 1 #####################################################
   # Fit a linear model
-  output.fit1[[i]] <- lm(temp.diff ~ ice.diff + LL.diff + ice.diff:LL.diff, data = newYear2.scale)
+  output.fit1[[i]] <- lm(temp.diff ~ fit.ice + ice.diff + LL.diff, data = newYear2.scale)
   
   ####################################### FIT 2 #########################################################
   # Fit a linear model
-  output.fit2[[i]] <- lm(temp.diff ~ fit.ice, data = newYear2.scale)
+  output.fit2[[i]] <- lm(temp.diff ~ fit.LL, data = newYear2.scale)
   
   ####################################### FIT 3 #########################################################
   # Fit a linear model
-  output.fit3[[i]] <- lm(fit.temp ~ fit.ice, data = newYear2.scale)
+  output.fit3[[i]] <- lm(fit.temp ~ ice.diff, data = newYear2.scale)
 
   ####################################### FIT 4 #########################################################
   # Fit a linear model
-  output.fit4[[i]] <- lm(fit.temp ~ fit.LL, data = newYear2.scale)
+  output.fit4[[i]] <- lm(fit.temp ~ fit.LL + fit.ice, data = newYear2.scale)
 
-  output.fit5[[i]] <- lm(fit.temp ~ fit.LL + fit.ice, data = newYear2.scale)
-  output.fit5.5[[i]] <- lm(fit.temp ~ fit.LL + fit.ice + fit.LL:fit.ice, data = newYear2.scale)
+  output.fit5[[i]] <- lm(fit.temp ~ fit.ice, data = newYear2.scale)
+  
+  output.fit5.5[[i]] <- lm(fit.temp ~ LL.diff + fit.ice + LL.diff:fit.ice, data = newYear2.scale)
   
 }
 
@@ -211,13 +212,13 @@ p6 = ggplot(full.predict.dec) +
 p7 = ggplot(full.predict.dec) +
   geom_col(aes(x = date_time, y = LL.diff, fill = location_name)) +
   ylab('LL Diff (°C)') +
-  ylim(-0.3,0.58) +
+  ylim(-0.25,0.8) +
   plotCustom + 
   theme(strip.background = element_blank(), strip.text.x = element_blank())
 
-p1/p2/p3/p5/p6/p7 + plot_annotation(tag_levels = 'a', tag_suffix = ')') &
+p1/p2/p3/p5+p7 + plot_annotation(tag_levels = 'a', tag_suffix = ')') &
   theme(plot.tag = element_text(size = 8))
-ggsave(paste0('figures/Fig4_GAMS.png'), width = 6.5, height = 8.5, dpi = 500)
+ggsave(paste0('figures/Fig4_GAMS.png'), width = 6.5, height = 6.5, dpi = 500)
 
 ################ Synchrony between timeseries #################
 
@@ -318,26 +319,4 @@ latexTable(coeffs_fit4, usecols = 6)
 latexTable(coeffs_fit3, usecols = 6)
 latexTable(coeffs_fit1)
 latexTable(coeffs_fit2, usecols = 6)
-
-################################ Variable-lag Granger Causality ################################
-for (i in 1:4) {
-  print(i)
-  print(VLTimeCausality::VLGrangerFunc(Y = output.predict.dec[[i]]$fit.temp, X = output.predict.dec[[i]]$fit.ice, gamma = 0.5)$XgCsY)
-  print(VLTimeCausality::VLGrangerFunc(Y = output.predict.dec[[i]]$fit.temp, X = output.predict.dec[[i]]$fit.LL, gamma = 0.5)$XgCsY)
-  print(VLTimeCausality::VLGrangerFunc(Y = output.predict.dec[[i]]$fit.temp, X = output.predict.dec[[i]]$ice.diff, gamma = 0.5)$XgCsY)
-  print(VLTimeCausality::VLGrangerFunc(Y = output.predict.dec[[i]]$fit.temp, X = output.predict.dec[[i]]$LL.diff, gamma = 0.5)$XgCsY)
-
-}
-
-for (i in 1:4) {
-  print(i)
-  print(VLTimeCausality::VLGrangerFunc(Y = output.predict.dec[[i]]$fit.temp, X = output.predict.dec[[i]]$fit.ice, gamma = 0.5)$XgCsY)
-  print(VLTimeCausality::VLGrangerFunc(Y = output.predict.dec[[i]]$fit.temp, X = lead(output.predict.dec[[i]]$fit.ice), gamma = 0.5)$XgCsY)
-}
-
-for (i in 1:4) {
-  print(i)
-  print(VLTimeCausality::VLGrangerFunc(Y = output.predict.dec[[i]]$temp.diff, X = output.predict.dec[[i]]$fit.ice, gamma = 0.5)$XgCsY)
-  print(VLTimeCausality::VLGrangerFunc(Y = output.predict.dec[[i]]$temp.diff, X = lead(output.predict.dec[[i]]$fit.ice), gamma = 0.5)$XgCsY)
-}
 
