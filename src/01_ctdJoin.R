@@ -7,6 +7,7 @@ library(mgcv)
 library(marelac)
 library(wql)
 library(ggtext)
+library(gridtext)
 library(scico)
 
 

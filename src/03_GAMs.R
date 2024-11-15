@@ -16,17 +16,11 @@ usecolors = c("#BB9F2F", "#94B9AF", "#942911", "#593837")
 
 lakecolor = data.frame(uselake = c('Lake Fryxell','Lake Hoare', 'East Lake Bonney', 'West Lake Bonney'), 
            plotColor = usecolors, 
-           k = c(30,30,30,50))
+           k = c(30,30,25,25))
 
-output.plots = list()
-output.fit1 = list()
-output.fit2 = list()
-output.fit3 = list()
-output.fit4 = list()
-output.fit5 = list()
-output.fit5.5 = list()
-output.predict = list()
-output.predict.dec = list()
+output.plots = list(); output.fit1 = list(); output.fit2 = list(); output.fit3 = list()
+output.fit4 = list(); output.fit5 = list(); output.fit5.5 = list()
+output.predict = list(); output.predict.dec = list()
 
 # Big old loop ####
 for (i in 1:4) {
@@ -47,13 +41,13 @@ for (i in 1:4) {
   # Use fewer predictors.
   
   ## Fit gam
-  mod.ice <- gam(ice.approx ~ s(dec.date, k = usek, bs = 'tp'), 
+  mod.ice <- gam(ice.approx ~ s(dec.date, k = usek, bs = 'tp', m = 2), 
                  data = heat.day |> filter(location_name == uselake))
-  mod.temp <- gam(tempUse ~ s(dec.date, k = usek, bs = 'tp'), 
+  mod.temp <- gam(tempUse ~ s(dec.date, k = usek, bs = 'tp', m = 2), 
                  data = heat.day |> filter(location_name == uselake))
-  mod.vol <- gam(vol ~ s(dec.date, k = usek, bs = 'tp'),
+  mod.vol <- gam(vol ~ s(dec.date, k = usek, bs = 'tp', m = 2),
                   data = heat.day |> filter(location_name == uselake))
-  # mod.LL <- gam(LL ~ s(dec.date, k = usek, bs = 'tp'), 
+  # mod.LL <- gam(LL ~ s(dec.date, k = usek, bs = 'tp'),
   #                data = heat.day |> filter(location_name == uselake))
   
   ll.dec = ll |> mutate(dec.date = decimal_date(date_time)) |> filter(month(date_time) >= 10)
@@ -107,37 +101,31 @@ for (i in 1:4) {
     filter(month(date_time) == 12) |> 
     mutate(fit.WL = fit.LL + fit.ice) |> 
     select(date_time, dec.date, fit.ice, fit.temp, fit.LL, fit.WL) |>
-    mutate(ice.diff = c(0,diff(fit.ice))) |> 
-    mutate(temp.diff = c(0,diff(fit.temp))) |> 
-    mutate(LL.diff = c(0,diff(fit.LL))) |> 
-    mutate(WL.diff = c(0,diff(fit.WL)))
+    mutate(ice.diff = c(NA,diff(fit.ice))) |> 
+    mutate(temp.diff = c(NA,diff(fit.temp))) |> 
+    mutate(LL.diff = c(NA,diff(fit.LL))) |> 
+    mutate(WL.diff = c(NA,diff(fit.WL)))
 
   output.predict[[i]] = newYear |> mutate(location_name = uselake)
-  output.predict.dec[[i]] = newYear2 |> mutate(location_name = uselake)
+  output.predict.dec[[i]] = newYear2 |> mutate(location_name = uselake) 
 
   # Standardize predictors
   newYear2.scale = newYear2 %>%
     mutate(across(where(is.numeric), scale))
   
   ########################################### FIT 1 #####################################################
-  # Fit a linear model
   output.fit1[[i]] <- lm(temp.diff ~ fit.ice + ice.diff + LL.diff, data = newYear2.scale)
-  
-  ####################################### FIT 2 #########################################################
-  # Fit a linear model
-  output.fit2[[i]] <- lm(temp.diff ~ fit.LL, data = newYear2.scale)
-  
-  ####################################### FIT 3 #########################################################
-  # Fit a linear model
-  output.fit3[[i]] <- lm(fit.temp ~ ice.diff, data = newYear2.scale)
+  output.fit2[[i]] <- lm(temp.diff ~ LL.diff, data = newYear2.scale)
+  output.fit3[[i]] <- lm(temp.diff ~ ice.diff, data = newYear2.scale)
 
+  
+  ggplot(newYear2.scale) + geom_point (aes(x = temp.diff, y = ice.diff, col = year(date_time))) +
+    geom_label(aes(x = temp.diff, y = ice.diff, label = year(date_time)))
   ####################################### FIT 4 #########################################################
   # Fit a linear model
-  output.fit4[[i]] <- lm(fit.temp ~ fit.LL + fit.ice, data = newYear2.scale)
-
+  output.fit4[[i]] <- lm(fit.temp ~ fit.LL, data = newYear2.scale)
   output.fit5[[i]] <- lm(fit.temp ~ fit.ice, data = newYear2.scale)
-  
-  output.fit5.5[[i]] <- lm(fit.temp ~ LL.diff + fit.ice + LL.diff:fit.ice, data = newYear2.scale)
+  output.fit5.5[[i]] <- lm(fit.temp ~ LL.diff + fit.ice, data = newYear2.scale)
   
 }
 
@@ -148,7 +136,7 @@ full.predict = bind_rows(output.predict) |>
 full.predict.dec = bind_rows(output.predict.dec) |> 
   mutate(location_name = factor(location_name, levels = c('Lake Fryxell','Lake Hoare', 'East Lake Bonney', 'West Lake Bonney'))) 
 
-plotCustom = list(  scale_colour_grey(),
+plotCustom = list(  scale_colour_grey(end = 0.5),
                     scale_fill_manual(values = usecolors),
                     theme_bw(base_size = 9),
                     facet_wrap(~location_name, scales = 'free_y', nrow = 1),
@@ -216,9 +204,11 @@ p7 = ggplot(full.predict.dec) +
   plotCustom + 
   theme(strip.background = element_blank(), strip.text.x = element_blank())
 
-p1/p2/p3/p5+p7 + plot_annotation(tag_levels = 'a', tag_suffix = ')') &
+p1/p2/p3/p5/p6/p7 + 
+  plot_layout(heights = c(1.5,1.5,1.5,1,1,1)) +
+  plot_annotation(tag_levels = 'a', tag_suffix = ')') &
   theme(plot.tag = element_text(size = 8))
-ggsave(paste0('figures/Fig4_GAMS.png'), width = 6.5, height = 6.5, dpi = 500)
+ggsave(paste0('figures/Fig4_GAMS.png'), width = 6.5, height = 7, dpi = 500)
 
 ################ Synchrony between timeseries #################
 
@@ -242,6 +232,9 @@ getCoeffs <- function(i, usefit) {
   AIC = broom::glance(usefit[[i]])$AIC
   BIC = broom::glance(usefit[[i]])$BIC
   
+  # Extract dependent variable 
+  depVar = names(model.frame(output.fit1[[i]]))[1]
+  
   # Extract summary of the model
   summary_fit <- summary(usefit[[i]])
   
@@ -253,13 +246,15 @@ getCoeffs <- function(i, usefit) {
   coeffs_df <- as.data.frame(coeffs) |> 
     select(Estimate, 4,) 
   
-  coeffs_df = bind_cols(Lake = lakecolor$uselake[i], Parameter = rownames(coeffs_df), coeffs_df) |> 
+  coeffs_df = bind_cols(Lake = lakecolor$uselake[i], 
+                        y = depVar, 
+                        Parameter = rownames(coeffs_df), coeffs_df) |> 
     filter(Parameter != '(Intercept)')
   
   # Remove the row names
   rownames(coeffs_df) <- NULL
   # Add significance stars based on p-values
-  coeffs_df$Signif <- cut(coeffs_df[, 4], 
+  coeffs_df$Signif <- cut(coeffs_df[, 5], 
                           breaks = c(-Inf, 0.001, 0.01, 0.05, 0.1, Inf), 
                           labels = c("***", "**", "*", ".", " "))
   coeffs_df = coeffs_df |> left_join(data.frame(Parameter = coeffs_df$Parameter[1], AIC = AIC, BIC = BIC, 

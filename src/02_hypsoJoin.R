@@ -141,13 +141,28 @@ heat.day = hypo.fill |>
   mutate(location_name = factor(location_name, levels = c('Lake Fryxell','Lake Hoare', 'East Lake Bonney', 'West Lake Bonney'))) |> 
   mutate(dec.date = decimal_date(date_time), yday = yday(date_time)) |> 
   mutate(yday = if_else(yday > 200, yday, yday+365)) |> 
-  filter(month(date_time) >= 10) |> 
   mutate(tempUse = if_else(location_name == 'West Lake Bonney' & year(date_time) == 2005, NA, tempUse))
+
+heat.day_DecJan = heat.day |> 
+  filter(case_when(location_name == "Lake Hoare" ~ yday(date_time) < 244 | yday(date_time) > 350, #Between Sep 1 and Dec 15th for Lake Hoare
+                   T ~ yday(date_time) < 244 | yday(date_time) > 335)) # Between Sep 1 and Dec 1 for other lakes 
+
+heat.day = heat.day |> 
+  filter(case_when(location_name == "Lake Hoare" ~ yday(date_time) >= 244 & yday(date_time) <= 350, #Between Sep 1 and Dec 15th for Lake Hoare
+                   T ~ yday(date_time) >= 244 & yday(date_time) <= 335)) # Between Sep 1 and Dec 1 for other lakes 
+         
+# yday(as.Date('1997-12-01'))
 
 ######### Plot timeseries ##########
 h.ts = ggplot(heat.day) +
-  geom_smooth(aes(x = date_time, y = heatTot_J_m2/1e6, color = location_name), method = 'gam') +
-  geom_point(aes(x = date_time, y = heatTot_J_m2/1e6, fill = location_name), shape = 21, stroke = 0.2) +
+  geom_smooth(data = heat.day |> filter(year(date_time) <= 2020),
+              aes(x = date_time, y = heatTot_J_m2/1e6, color = location_name), method = 'gam', 
+              formula = y ~ s(x, k = 25, bs = "tp", m = 1)) +
+  geom_smooth(data = heat.day |> filter(year(date_time) > 2020),
+              aes(x = date_time, y = heatTot_J_m2/1e6, color = location_name), method = 'lm') +
+  geom_point(data = heat.day_DecJan, 
+             aes(x = date_time, y = heatTot_J_m2/1e6, fill = location_name), shape = 22, stroke = 0.2, alpha = 0.5) +
+  geom_point(aes(x = date_time, y = heatTot_J_m2/1e6, fill = location_name), shape = 21, stroke = 0.2, size = 1.2) +
   scale_color_manual(values = usecolors, name = 'Lake') +
   scale_fill_manual(values = usecolors, name = 'Lake') +
   ylab('Heat storage (MJ m^-2 )') +
@@ -158,7 +173,8 @@ h.ts = ggplot(heat.day) +
         legend.title = element_blank(),
         legend.text = element_text(size = 7),
         legend.key.size = unit(0.2,'cm'),
-        legend.margin = margin(0, 0, 0, 0))
+        legend.margin = margin(0, 0, 0, 0)); h.ts
+
 
 ggsave('figures/Fig2_Heat_TimeSeries.png', width = 4, height = 2.5, dpi = 500)
 
@@ -168,6 +184,8 @@ ggsave('figures/Fig2_Heat_TimeSeries.png', width = 4, height = 2.5, dpi = 500)
 layout <- "
 AA
 AA
+AA
+BB
 BB
 "
 (h1.epi + h2.epi + h3.epi + h4.epi + plot_layout(guides = 'collect')) / h.ts +
@@ -185,3 +203,4 @@ heat.day |> group_by(location_name) |>
 
 hypo.join |> group_by(location_name) |> 
   summarise(minHeat = min(heat_J_m3/1e6, na.rm = T), maxHeat = max(heat_J_m3/1e6, na.rm = T))
+
