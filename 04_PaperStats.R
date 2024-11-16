@@ -41,8 +41,8 @@ a |>
 
 
 ############ Synchrony for Temperature ###########
-sync1 = data.frame(LF_temp = c(NA, NA,output.predict.dec[[1]]$fit.temp), 
-                   LH_temp = c(NA, NA, output.predict.dec[[2]]$fit.temp,NA), 
+sync1 = data.frame(LF_temp = c(output.predict.dec[[1]]$fit.temp), 
+                   LH_temp = c(output.predict.dec[[2]]$fit.temp,NA), 
                    ELB_temp = output.predict.dec[[3]]$fit.temp, 
                    WLB_temp = output.predict.dec[[4]]$fit.temp)
 
@@ -100,8 +100,8 @@ for (i in 1:6) {
 latexTable(sync1.out, usecols = 5)
 
 ############ Synchrony for Ice Thickness ###########
-sync2 = data.frame(LF_temp = c(NA, NA,output.predict.dec[[1]]$fit.ice), 
-                   LH_temp = c(NA, NA, output.predict.dec[[2]]$fit.ice,NA), 
+sync2 = data.frame(LF_temp = c(output.predict.dec[[1]]$fit.ice), 
+                   LH_temp = c(output.predict.dec[[2]]$fit.ice,NA), 
                    ELB_temp = output.predict.dec[[3]]$fit.ice, 
                    WLB_temp = output.predict.dec[[4]]$fit.ice)
 
@@ -161,38 +161,38 @@ latexTable(sync2.out, usecols = 5)
 ########################## Autocorrelation in timeseries ##############################
 for (i in 1:4) {
   uselake = lakecolor$uselake[i]
-  nrows = length(output.predict.dec[[i]]$temp.diff)
-  print(acf(output.predict.dec[[i]]$temp.diff, main = uselake, ci = 0.99))
+  nrows = length(output.predict.dec[[i]]$temp.diff[-1])
+  print(acf(output.predict.dec[[i]]$temp.diff[-1], main = uselake, ci = 0.99))
   # Compute confidence interval 
   # Use 95 or 99% confidence? 
   ci = qnorm((1 + 0.99)/2)/sqrt(nrows)
   
-  sig = acf(output.predict.dec[[i]]$temp.diff, plot = F)$acf[2] > ci
+  sig = acf(output.predict.dec[[i]]$temp.diff[-1], plot = F)$acf[2] > ci
   print(paste0(uselake, ' acf temp.diff: ', sig))
   
 }
 
 for (i in 1:4) {
   uselake = lakecolor$uselake[i]
-  nrows = length(output.predict.dec[[i]]$ice.diff)
-  print(acf(output.predict.dec[[i]]$ice.diff, main = uselake, ci = 0.99))
+  nrows = length(output.predict.dec[[i]]$ice.diff[-1])
+  print(acf(output.predict.dec[[i]]$ice.diff[-1], main = uselake, ci = 0.99))
   # Compute confidence interval 
   # Use 95 or 99% confidence? 
   ci = qnorm((1 + 0.99)/2)/sqrt(nrows)
   
-  sig = acf(output.predict.dec[[i]]$ice.diff, plot = F)$acf[2] > ci
+  sig = acf(output.predict.dec[[i]]$ice.diff[-1], plot = F)$acf[2] > ci
   print(paste0(uselake, ' acf ice.diff: ', sig))
 }
 
 for (i in 1:4) {
   uselake = lakecolor$uselake[i]
-  nrows = length(output.predict.dec[[i]]$LL.diff)
-  print(acf(output.predict.dec[[i]]$LL.diff, main = uselake, ci = 0.99))
+  nrows = length(output.predict.dec[[i]]$LL.diff[-1])
+  print(acf(output.predict.dec[[i]]$LL.diff[-1], main = uselake, ci = 0.99))
   # Compute confidence interval 
   # Use 95 or 99% confidence? 
   ci = qnorm((1 + 0.99)/2)/sqrt(nrows)
   
-  sig = acf(output.predict.dec[[i]]$LL.diff, plot = F)$acf[2] > ci
+  sig = acf(output.predict.dec[[i]]$LL.diff[-1], plot = F)$acf[2] > ci
   print(paste0(uselake, ' acf ll.diff: ', sig))
 }
 

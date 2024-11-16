@@ -15,12 +15,13 @@ usecolors =  c('#4477c9', '#e3dc10', '#b34f0c', '#4c944a')
 usecolors = c("#BB9F2F", "#94B9AF", "#942911", "#593837")
 
 lakecolor = data.frame(uselake = c('Lake Fryxell','Lake Hoare', 'East Lake Bonney', 'West Lake Bonney'), 
+                       lakeAbbr = c('LF','LH','ELB','WLB'),
            plotColor = usecolors, 
-           k = c(30,30,25,25))
+           k = c(30,30,30,30))
 
-output.plots = list(); output.fit1 = list(); output.fit2 = list(); output.fit3 = list()
-output.fit4 = list(); output.fit5 = list(); output.fit5.5 = list()
-output.predict = list(); output.predict.dec = list()
+output.plots = list(); output.fit1 = list(); output.fit2 = list(); output.fit3 = list(); output.fit3.5 = list()
+output.fit4 = list(); output.fit5 = list(); output.fit5.5 = list(); output.fit6 = list()
+output.predict = list(); output.predict.dec = list(); interp.out = list()
 
 # Big old loop ####
 for (i in 1:4) {
@@ -40,28 +41,36 @@ for (i in 1:4) {
   # Change some of the smoothed predictors + s(X1) to linear terms + X1.
   # Use fewer predictors.
   
-  ## Fit gam
-  mod.ice <- gam(ice.approx ~ s(dec.date, k = usek, bs = 'tp', m = 2), 
-                 data = heat.day |> filter(location_name == uselake))
+  ## Fit gam to mean temp data 
   mod.temp <- gam(tempUse ~ s(dec.date, k = usek, bs = 'tp', m = 2), 
                  data = heat.day |> filter(location_name == uselake))
-  mod.vol <- gam(vol ~ s(dec.date, k = usek, bs = 'tp', m = 2),
+  mod.vol <- gam(vol ~ s(dec.date, k = usek, bs = 'tp'),
                   data = heat.day |> filter(location_name == uselake))
-  # mod.LL <- gam(LL ~ s(dec.date, k = usek, bs = 'tp'),
-  #                data = heat.day |> filter(location_name == uselake))
   
-  ll.dec = ll |> mutate(dec.date = decimal_date(date_time)) |> filter(month(date_time) >= 10)
-  mod.LL = gam(masl ~ s(dec.date, k = 25, bs = 'tp'), 
+  # Fit GAM to ice
+  ice.dec = ice |> mutate(dec.date = decimal_date(date_time)) |> 
+    filter(yday(date_time) >= 244 & yday(date_time) <= 350) |> # Between Sep 1 and Dec 15 for all lakes 
+    mutate(location_name = factor(location_name, levels = c('Lake Fryxell','Lake Hoare', 'East Lake Bonney', 'West Lake Bonney'))) 
+  
+  mod.ice = gam(z_water_m ~ s(dec.date, k = usek, bs = 'tp', m = 2), 
+               data = ice.dec |> filter(location_name == uselake))
+  
+  
+  # Fit GAM to lake level data 
+  ll.dec = ll |> mutate(dec.date = decimal_date(date_time)) |>
+    filter(yday(date_time) >= 244 & yday(date_time) <= 350) |> # Between Sep 1 and Dec 15 for all lakes 
+    mutate(location_name = factor(location_name, levels = c('Lake Fryxell','Lake Hoare', 'East Lake Bonney', 'West Lake Bonney'))) 
+  
+  mod.LL = gam(masl ~ s(dec.date, k = 25, bs = 'tp', m = 2), 
       data = ll.dec |> filter(location_name == uselake))
   
   summary(mod.ice)
   summary(mod.temp)
   summary(mod.vol)
   summary(mod.LL)
-  N <- 300 # number of points at which to evaluate the smooth
   
   ## create new data to predict at start of every month
-  newYear = data.frame(date_time = seq.Date(from = as.Date('1993-10-01'), to = as.Date('2024-01-01'), by = 'month')) |> 
+  newYear = data.frame(date_time = seq.Date(from = as.Date('1995-10-01'), to = as.Date('2024-01-01'), by = 'month')) |> 
     mutate(dec.date = decimal_date(date_time))
   
   if (uselake == 'Lake Fryxell') {
@@ -99,33 +108,54 @@ for (i in 1:4) {
   # Create difference columns
   newYear2 = newYear |>
     filter(month(date_time) == 12) |> 
+    mutate(across(-date_time, ~ ifelse(year(date_time) == 2020, NA, .))) |> 
     mutate(fit.WL = fit.LL + fit.ice) |> 
-    select(date_time, dec.date, fit.ice, fit.temp, fit.LL, fit.WL) |>
-    mutate(ice.diff = c(NA,diff(fit.ice))) |> 
-    mutate(temp.diff = c(NA,diff(fit.temp))) |> 
-    mutate(LL.diff = c(NA,diff(fit.LL))) |> 
-    mutate(WL.diff = c(NA,diff(fit.WL)))
+    select(date_time, dec.date, fit.ice, fit.temp, fit.LL, fit.WL)
+    # mutate(ice.diff = c(NA,diff(fit.ice))) |> 
+    # mutate(temp.diff = c(NA,diff(fit.temp))) |> 
+    # mutate(LL.diff = c(NA,diff(fit.LL))) |> 
+    # mutate(WL.diff = c(NA,diff(fit.WL)))
 
   output.predict[[i]] = newYear |> mutate(location_name = uselake)
   output.predict.dec[[i]] = newYear2 |> mutate(location_name = uselake) 
 
-  # Standardize predictors
-  newYear2.scale = newYear2 %>%
-    mutate(across(where(is.numeric), scale))
+ # Take mean of sampled datas for temp, ice, and lake level 
+  fit.interp = 
+    data.frame(year = 1995:2024, dec.date = 1995:2024 + 0.9) |>
+    left_join(
+    heat.day |> filter(location_name == uselake) |> 
+    group_by(year = year(date_time)) |> 
+    summarise(temp = mean(tempUse, na.rm = TRUE))
+    ) |> 
+    left_join(
+    ice.dec |> filter(location_name == uselake) |> 
+    group_by(year = year(date_time)) |> 
+    summarise(iceZ = mean(z_water_m, na.rm = TRUE)) 
+    ) |> 
+    left_join(
+      ll.dec |> filter(location_name == uselake) |> 
+        group_by(year = year(date_time)) |> 
+        summarise(LL = mean(masl, na.rm = TRUE))
+    ) |> 
+    
+    arrange(year) |> 
+    mutate(ice.diff = c(NA,diff(iceZ))) |> 
+    mutate(temp.diff = c(NA,diff(temp))) |> 
+    mutate(LL.diff = c(NA,diff(LL)))
   
+  interp.out[[i]] = fit.interp |> mutate(location_name = uselake) 
   ########################################### FIT 1 #####################################################
-  output.fit1[[i]] <- lm(temp.diff ~ fit.ice + ice.diff + LL.diff, data = newYear2.scale)
-  output.fit2[[i]] <- lm(temp.diff ~ LL.diff, data = newYear2.scale)
-  output.fit3[[i]] <- lm(temp.diff ~ ice.diff, data = newYear2.scale)
+  output.fit1[[i]] <- lm(temp.diff ~ iceZ + ice.diff + LL.diff, data = fit.interp)
+  output.fit2[[i]] <- lm(temp.diff ~ LL.diff, data = fit.interp)
+  output.fit3[[i]] <- lm(temp.diff ~ ice.diff, data = fit.interp)
+  output.fit3.5[[i]] <- lm(temp.diff ~ iceZ, data = fit.interp)
 
-  
-  ggplot(newYear2.scale) + geom_point (aes(x = temp.diff, y = ice.diff, col = year(date_time))) +
-    geom_label(aes(x = temp.diff, y = ice.diff, label = year(date_time)))
   ####################################### FIT 4 #########################################################
   # Fit a linear model
-  output.fit4[[i]] <- lm(fit.temp ~ fit.LL, data = newYear2.scale)
-  output.fit5[[i]] <- lm(fit.temp ~ fit.ice, data = newYear2.scale)
-  output.fit5.5[[i]] <- lm(fit.temp ~ LL.diff + fit.ice, data = newYear2.scale)
+  output.fit4[[i]] <- lm(temp ~ LL, data = fit.interp)
+  output.fit5[[i]] <- lm(temp ~ iceZ, data = fit.interp)
+  output.fit5.5[[i]] <- lm(temp ~ LL + iceZ, data = fit.interp)
+  output.fit6[[i]] <- lm(temp ~ LL + iceZ + ice.diff + LL, data = fit.interp)
   
 }
 
@@ -135,11 +165,15 @@ full.predict = bind_rows(output.predict) |>
   mutate(location_name = factor(location_name, levels = c('Lake Fryxell','Lake Hoare', 'East Lake Bonney', 'West Lake Bonney'))) 
 full.predict.dec = bind_rows(output.predict.dec) |> 
   mutate(location_name = factor(location_name, levels = c('Lake Fryxell','Lake Hoare', 'East Lake Bonney', 'West Lake Bonney'))) 
+full.interp = bind_rows(interp.out) |>
+  mutate(location_name = factor(location_name, levels = c('Lake Fryxell','Lake Hoare', 'East Lake Bonney', 'West Lake Bonney'))) 
+  
 
 plotCustom = list(  scale_colour_grey(end = 0.5),
                     scale_fill_manual(values = usecolors),
                     theme_bw(base_size = 9),
                     facet_wrap(~location_name, scales = 'free_y', nrow = 1),
+                    scale_x_continuous(breaks = c(2000,2010,2020)), 
                     theme(axis.title.x = element_blank(),
                           legend.position = 'none',
                           legend.title = element_blank(),
@@ -152,18 +186,24 @@ p1 = ggplot(full.predict, aes(x = dec.date, y = fit.temp)) +
               inherit.aes = FALSE) +
   geom_point(data = heat.day, 
              mapping = aes(x = dec.date, y = tempUse, color = factor(month(date_time))),
-             inherit.aes = FALSE, size = 0.6) +
-  geom_line() +
+             inherit.aes = FALSE, size = 0.4) +
+  geom_point(data = full.interp, 
+             mapping = aes(x = dec.date, y = temp, fill = location_name), 
+             shape = 24, size = 1, stroke = 0.2) +
+  geom_line(size = 0.3) +
   labs(y = "Mean Temp (°C)") +
-  plotCustom
+  plotCustom; p1
 
 p2 = ggplot(full.predict, aes(x = dec.date, y = fit.ice)) +
   geom_ribbon(aes(ymin = lower.ice, ymax = upper.ice, x = dec.date, fill = location_name), alpha = 0.5,
               inherit.aes = FALSE) +
-  geom_point(data = heat.day , 
-             mapping = aes(x = dec.date, y = ice.approx, color = factor(month(date_time))),
-             inherit.aes = FALSE, size = 0.6) +
-  geom_line() +
+  geom_point(data = ice.dec , 
+             mapping = aes(x = dec.date, y = z_water_m, color = factor(month(date_time))),
+             inherit.aes = FALSE, size = 0.4) +
+  geom_point(data = full.interp, 
+             mapping = aes(x = dec.date, y = iceZ, fill = location_name), 
+             shape = 24, size = 1, stroke = 0.2) +
+  geom_line(size = 0.3) +
   labs(y = "Ice Thickness (m)") +
   plotCustom + 
   theme(strip.background = element_blank(), strip.text.x = element_blank())
@@ -171,10 +211,13 @@ p2 = ggplot(full.predict, aes(x = dec.date, y = fit.ice)) +
 p3 = ggplot(full.predict, aes(x = dec.date, y = fit.LL)) +
   geom_ribbon(aes(ymin = lower.LL, ymax = upper.LL, x = dec.date, , fill = location_name), alpha = 0.5,
               inherit.aes = FALSE) +
-  geom_point(data = heat.day, 
-             mapping = aes(x = dec.date, y = LL, color = factor(month(date_time))),
-             inherit.aes = FALSE, size = 0.6) +
-  geom_line() +
+  geom_point(data = ll.dec, 
+             mapping = aes(x = dec.date, y = masl, color = factor(month(date_time))),
+             inherit.aes = FALSE, size = 0.4) +
+  geom_point(data = full.interp, 
+             mapping = aes(x = dec.date, y = LL, fill = location_name), 
+             shape = 24, size = 1, stroke = 0.2) +
+  geom_line(size = 0.3) +
   geom_ribbon(aes(ymin = lower.LL + lower.ice, ymax = upper.LL + upper.ice, x = dec.date, fill = location_name), alpha = 0.5,
               inherit.aes = FALSE) +
   geom_line(aes(y = fit.LL + fit.ice)) +
@@ -183,24 +226,24 @@ p3 = ggplot(full.predict, aes(x = dec.date, y = fit.LL)) +
   theme(strip.background = element_blank(), strip.text.x = element_blank())
 
 # Plots of Diffs 
-p5 = ggplot(full.predict.dec) +
-  geom_col(aes(x = date_time, y = temp.diff, fill = location_name)) +
+p5 = ggplot(full.interp) +
+  geom_col(aes(x = dec.date, y = temp.diff, fill = location_name)) +
   ylab('Temp Diff (°C)') +
-  ylim(-0.3,0.34) +
+  ylim(-0.32,0.36) +
   plotCustom + 
   theme(strip.background = element_blank(), strip.text.x = element_blank())
 
-p6 = ggplot(full.predict.dec) +
-  geom_col(aes(x = date_time, y = ice.diff, fill = location_name)) +
+p6 = ggplot(full.interp) +
+  geom_col(aes(x = dec.date, y = ice.diff, fill = location_name)) +
   ylab('Ice Diff (°C)') +
-  ylim(-0.65,1.5) +
+  ylim(-0.72,1.5) +
   plotCustom + 
   theme(strip.background = element_blank(), strip.text.x = element_blank())
 
-p7 = ggplot(full.predict.dec) +
-  geom_col(aes(x = date_time, y = LL.diff, fill = location_name)) +
+p7 = ggplot(full.interp) +
+  geom_col(aes(x = dec.date, y = LL.diff, fill = location_name)) +
   ylab('LL Diff (°C)') +
-  ylim(-0.25,0.8) +
+  ylim(-0.25,0.82) +
   plotCustom + 
   theme(strip.background = element_blank(), strip.text.x = element_blank())
 
@@ -214,8 +257,8 @@ ggsave(paste0('figures/Fig4_GAMS.png'), width = 6.5, height = 7, dpi = 500)
 
 #Syncrony between timeseries of ice thickness
 sync2 = data.frame(date_time = output.predict.dec[[3]]$date_time, 
-                   LF_ice = c(NA, NA,output.predict.dec[[1]]$fit.ice), 
-                   LH_ice = c(NA, NA, output.predict.dec[[2]]$fit.ice,NA), 
+                   LF_ice = c(output.predict.dec[[1]]$fit.ice), 
+                   LH_ice = c(output.predict.dec[[2]]$fit.ice,NA), 
                    ELB_ice = output.predict.dec[[3]]$fit.ice, 
                    WLB_ice = output.predict.dec[[4]]$fit.ice)
 
@@ -233,7 +276,7 @@ getCoeffs <- function(i, usefit) {
   BIC = broom::glance(usefit[[i]])$BIC
   
   # Extract dependent variable 
-  depVar = names(model.frame(output.fit1[[i]]))[1]
+  depVar = names(model.frame(usefit[[i]]))[1]
   
   # Extract summary of the model
   summary_fit <- summary(usefit[[i]])
@@ -246,7 +289,7 @@ getCoeffs <- function(i, usefit) {
   coeffs_df <- as.data.frame(coeffs) |> 
     select(Estimate, 4,) 
   
-  coeffs_df = bind_cols(Lake = lakecolor$uselake[i], 
+  coeffs_df = bind_cols(Lake = lakecolor$lakeAbbr[i], 
                         y = depVar, 
                         Parameter = rownames(coeffs_df), coeffs_df) |> 
     filter(Parameter != '(Intercept)')
@@ -278,23 +321,15 @@ getCoeffs <- function(i, usefit) {
 # VIF > 5: There is severe correlation between a given predictor variable and other predictor variables in the model.
 
 ##### Output coefficient of lm table #####
-coeffs_fit1 = getCoeffs(1, usefit = output.fit1) |> bind_rows(getCoeffs(2, usefit = output.fit1)) |> 
-  bind_rows(getCoeffs(3, usefit = output.fit1)) |> bind_rows(getCoeffs(4, usefit = output.fit1)) 
+coeffs_fit1 = bind_rows(lapply(X = 1:4, getCoeffs, usefit = output.fit1))
+coeffs_fit2 = bind_rows(lapply(X = 1:4, getCoeffs, usefit = output.fit2))
+coeffs_fit3 = bind_rows(lapply(X = 1:4, getCoeffs, usefit = output.fit3))
+coeffs_fit3.5 = bind_rows(lapply(X = 1:4, getCoeffs, usefit = output.fit3.5))
 
-coeffs_fit2 = getCoeffs(1, usefit = output.fit2) |> bind_rows(getCoeffs(2, usefit = output.fit2)) |> 
-  bind_rows(getCoeffs(3, usefit = output.fit2)) |> bind_rows(getCoeffs(4, usefit = output.fit2))
-
-coeffs_fit3 = getCoeffs(1, usefit = output.fit3) |> bind_rows(getCoeffs(2, usefit = output.fit3)) |> 
-  bind_rows(getCoeffs(3, usefit = output.fit3)) |> bind_rows(getCoeffs(4, usefit = output.fit3)) 
-
-coeffs_fit4 = getCoeffs(1, usefit = output.fit4) |> bind_rows(getCoeffs(2, usefit = output.fit4)) |> 
-  bind_rows(getCoeffs(3, usefit = output.fit4)) |> bind_rows(getCoeffs(4, usefit = output.fit4)) 
-
-coeffs_fit5 = getCoeffs(1, usefit = output.fit5) |> bind_rows(getCoeffs(2, usefit = output.fit5)) |> 
-  bind_rows(getCoeffs(3, usefit = output.fit5)) |> bind_rows(getCoeffs(4, usefit = output.fit5))
-
-coeffs_fit5.5 = getCoeffs(1, usefit = output.fit5.5) |> bind_rows(getCoeffs(2, usefit = output.fit5.5)) |> 
-  bind_rows(getCoeffs(3, usefit = output.fit5.5)) |> bind_rows(getCoeffs(4, usefit = output.fit5.5))
+coeffs_fit4 = bind_rows(lapply(X = 1:4, getCoeffs, usefit = output.fit4))
+coeffs_fit5 = bind_rows(lapply(X = 1:4, getCoeffs, usefit = output.fit5))
+coeffs_fit5.5 = bind_rows(lapply(X = 1:4, getCoeffs, usefit = output.fit5.5))
+coeffs_fit6 = bind_rows(lapply(X = 1:4, getCoeffs, usefit = output.fit6))
 
 latexTable <- function(coefffit, usecols = 8) {
   # Create the LaTeX table
@@ -309,9 +344,20 @@ latexTable <- function(coefffit, usecols = 8) {
 }
 
 # latexTable(coeffs_fit5)
-latexTable(coeffs_fit5.5)
-latexTable(coeffs_fit4, usecols = 6)
-latexTable(coeffs_fit3, usecols = 6)
-latexTable(coeffs_fit1)
-latexTable(coeffs_fit2, usecols = 6)
+latexTable(coeffs_fit1 |> bind_rows(coeffs_fit2) |> bind_rows(coeffs_fit3) |> bind_rows(coeffs_fit3.5) |>
+  mutate(Lake = factor(Lake, levels = c('LF','LH','ELB','WLB'))) |> 
+  arrange(Lake), usecols = 9)
+
+latexTable(coeffs_fit5.5 |> bind_rows(coeffs_fit5) |> bind_rows(coeffs_fit4) |>
+             mutate(Lake = factor(Lake, levels = c('LF','LH','ELB','WLB'))) |> 
+             arrange(Lake), usecols = 9)
+
+# latexTable(coeffs_fit1, usecols = 9)
+# latexTable(coeffs_fit2, usecols = 7)
+# latexTable(coeffs_fit3, usecols = 7)
+# latexTable(coeffs_fit3.5, usecols = 7)
+# 
+# latexTable(coeffs_fit5.5, usecols = 9)
+# latexTable(coeffs_fit4, usecols = 7)
+# latexTable(coeffs_fit5, usecols = 7)
 

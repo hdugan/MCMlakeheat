@@ -141,15 +141,18 @@ heat.day = hypo.fill |>
   mutate(location_name = factor(location_name, levels = c('Lake Fryxell','Lake Hoare', 'East Lake Bonney', 'West Lake Bonney'))) |> 
   mutate(dec.date = decimal_date(date_time), yday = yday(date_time)) |> 
   mutate(yday = if_else(yday > 200, yday, yday+365)) |> 
-  mutate(tempUse = if_else(location_name == 'West Lake Bonney' & year(date_time) == 2005, NA, tempUse))
+  mutate(tempUse = if_else(location_name == 'West Lake Bonney' & year(date_time) == 2005, NA, tempUse)) |> 
+  filter(yday(date_time) >= 244 & yday(date_time) <= 350) ##Between Sep 1 and Dec 15th for all lakes
 
-heat.day_DecJan = heat.day |> 
-  filter(case_when(location_name == "Lake Hoare" ~ yday(date_time) < 244 | yday(date_time) > 350, #Between Sep 1 and Dec 15th for Lake Hoare
-                   T ~ yday(date_time) < 244 | yday(date_time) > 335)) # Between Sep 1 and Dec 1 for other lakes 
-
-heat.day = heat.day |> 
-  filter(case_when(location_name == "Lake Hoare" ~ yday(date_time) >= 244 & yday(date_time) <= 350, #Between Sep 1 and Dec 15th for Lake Hoare
-                   T ~ yday(date_time) >= 244 & yday(date_time) <= 335)) # Between Sep 1 and Dec 1 for other lakes 
+# heat.day_DecJan = heat.day |> 
+#   filter(case_when(location_name == "Lake Hoare" ~ yday(date_time) < 244 | yday(date_time) > 350, #Between Sep 1 and Dec 15th for Lake Hoare
+#                    location_name == "Lake Hoare" ~ yday(date_time) < 244 | yday(date_time) > 340, #Between Sep 1 and Dec 5th for Lake Fryxell
+#                    T ~ yday(date_time) < 244 | yday(date_time) > 335)) # Between Sep 1 and Dec 1 for other lakes 
+# 
+# heat.day = heat.day |> 
+#   filter(case_when(location_name == "Lake Hoare" ~ yday(date_time) >= 244 & yday(date_time) <= 350, #Between Sep 1 and Dec 15th for Lake Hoare
+#                    location_name == "Lake Hoare" ~ yday(date_time) < 244 | yday(date_time) <= 340, #Between Sep 1 and Dec 5th for Lake Fryxell
+#                    T ~ yday(date_time) >= 244 & yday(date_time) <= 335)) # Between Sep 1 and Dec 1 for other lakes 
          
 # yday(as.Date('1997-12-01'))
 
