@@ -51,17 +51,18 @@ hoare_LF = read_csv('datain/papers/Hoare_Nov_1963.csv') |>
 # Package ID: knb-lter-mcm.88.17 Cataloging System:https://pasta.edirepository.org.
 inUrl1  <- "https://pasta.lternet.edu/package/data/eml/knb-lter-mcm/88/17/91474a205d3dd99cc794f8510d2d99c5" 
 infile1 <- tempfile()
+download.file(inUrl1,infile1,method="curl")
 
-# Attempt to download the file from EDI, if not locally
-infile1 = tryCatch(
-  expr = {
-    download.file(inUrl1,infile1,method="curl")
-  },
-  error = function(e) {  # If download fails, read the local file
-    message('Caught an error!')
-    return('datain/mcm_lter/mcmlter-lake-ctd-20231023.csv')
-  }
-)
+# # Attempt to download the file from EDI, if not locally
+# infile1 = tryCatch(
+#   expr = {
+#     download.file(inUrl1,infile1,method="curl")
+#   },
+#   error = function(e) {  # If download fails, read the local file
+#     message('Caught an error!')
+#     return('datain/mcm_lter/mcmlter-lake-ctd-20231023.csv')
+#   }
+# )
 
 # Read in 2023 data (will be online soon)
 ctd2023 = read_csv('datain/ctd_2023.csv')

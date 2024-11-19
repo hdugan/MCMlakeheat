@@ -21,7 +21,7 @@ max.depths = df.spcH %>%
 hypo.join = df.full.ice |> 
   filter(date_time %in% max.depths$date_time) %>% 
   left_join(hypo.use, by = join_by(depth.asl.char, location_name)) %>% 
-  mutate(temp_K = tempUse + 273.15) %>%
+  mutate(temp_K = tempUse + 5) %>% # set baseline temperature to -5°C
   mutate(spHeat_J_m3K = spHeat_J_kgK * density_kg_m3) %>% 
   # latent heat of ice = density * thickness *  latent heat of ice (334000 J/kg)
   mutate(LHice_J_m3 = iceDensity_kgm3 * 334000) |> 
@@ -52,10 +52,10 @@ makeHeat <- function(name, filllimits = c(NA,NA)) {
           legend.title = element_markdown())
 }
 
-h1.epi = makeHeat('Lake Fryxell', filllimits = c(1145,1170))
-h2.epi = makeHeat('Lake Hoare', filllimits = c(1145,1170))
-h3.epi = makeHeat('East Lake Bonney', filllimits = c(1145,1170)) + ylim(45, NA)
-h4.epi = makeHeat('West Lake Bonney', filllimits = c(1145,1170)) + ylim(45, NA)
+h1.epi = makeHeat('Lake Fryxell', filllimits = c(21,47))
+h2.epi = makeHeat('Lake Hoare', filllimits = c(21,47))
+h3.epi = makeHeat('East Lake Bonney', filllimits = c(21,47)) + ylim(45, NA)
+h4.epi = makeHeat('West Lake Bonney', filllimits = c(21,47)) + ylim(45, NA)
 
 h1.epi + h2.epi + h3.epi + h4.epi + plot_layout(guides = 'collect')
 ggsave('figures/Fig3_HeatContent_epi.png', width = 6, height = 4, dpi = 500)
@@ -140,20 +140,20 @@ heat.day = hypo.fill |>
   ungroup() |> 
   mutate(location_name = factor(location_name, levels = c('Lake Fryxell','Lake Hoare', 'East Lake Bonney', 'West Lake Bonney'))) |> 
   mutate(dec.date = decimal_date(date_time), yday = yday(date_time)) |> 
-  mutate(yday = if_else(yday > 200, yday, yday+365)) |> 
-  mutate(tempUse = if_else(location_name == 'West Lake Bonney' & year(date_time) == 2005, NA, tempUse)) |> 
+  mutate(yday = if_else(yday > 200, yday, yday+365)) 
+  # mutate(tempUse = if_else(location_name == 'West Lake Bonney' & year(date_time) == 2005, NA, tempUse)) 
+
+heat.day_DecJan = heat.day |>
+  filter(yday(date_time) < 244 | yday(date_time) > 350) # past Dec 15th
+
+heat.day = heat.day |> 
   filter(yday(date_time) >= 244 & yday(date_time) <= 350) ##Between Sep 1 and Dec 15th for all lakes
 
-# heat.day_DecJan = heat.day |> 
-#   filter(case_when(location_name == "Lake Hoare" ~ yday(date_time) < 244 | yday(date_time) > 350, #Between Sep 1 and Dec 15th for Lake Hoare
-#                    location_name == "Lake Hoare" ~ yday(date_time) < 244 | yday(date_time) > 340, #Between Sep 1 and Dec 5th for Lake Fryxell
-#                    T ~ yday(date_time) < 244 | yday(date_time) > 335)) # Between Sep 1 and Dec 1 for other lakes 
-# 
-# heat.day = heat.day |> 
+# heat.day = heat.day |>
 #   filter(case_when(location_name == "Lake Hoare" ~ yday(date_time) >= 244 & yday(date_time) <= 350, #Between Sep 1 and Dec 15th for Lake Hoare
-#                    location_name == "Lake Hoare" ~ yday(date_time) < 244 | yday(date_time) <= 340, #Between Sep 1 and Dec 5th for Lake Fryxell
-#                    T ~ yday(date_time) >= 244 & yday(date_time) <= 335)) # Between Sep 1 and Dec 1 for other lakes 
-         
+#                    location_name == "Lake Fryxell" ~ yday(date_time) < 244 | yday(date_time) <= 340, #Between Sep 1 and Dec 5th for Lake Fryxell
+#                    T ~ yday(date_time) >= 244 & yday(date_time) <= 335)) # Between Sep 1 and Dec 1 for other lakes
+
 # yday(as.Date('1997-12-01'))
 
 ######### Plot timeseries ##########
