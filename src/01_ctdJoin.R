@@ -164,6 +164,26 @@ quantile(df.spcH$density_kg_m3)
 # Check Range
 df.spcH |> group_by(location_name) |> summarise(min(spHeat_J_kgK, na.rm = T), max(spHeat_J_kgK, na.rm = T))
 
+##################### Add freezing point of water ########################
+# This is complicated because no equation exists for salinities > 40. 
+# Using a lookup table from Bodnar 1993
+bodnar = read_csv('datain/papers/Bodnar_1993_FreezingPoint_Lookup.csv') %>% 
+  mutate(Salinity = Salinity_1 + Salinity_2) %>% 
+  select(Salinity, FPD) %>% 
+  arrange(Salinity) %>% 
+  mutate(Salinity = as.character(Salinity))
+
+# Lookup table only goes up to eutectic point of pure NaCl (21.2 %wt, FPD = -23.18)
+# Everything above this salinity set FPD to 23.2
+df.spcH = df.spcH %>% 
+  mutate(Salinity = as.character(round(sal.pred2/10, 1))) %>% 
+  left_join(bodnar) %>% 
+  mutate(FPD = if_else(is.na(FPD), 23.2, FPD)) %>% 
+  mutate(FPD = -FPD)
+
+ggplot(df.spcH) +
+  geom_point(aes(x = sal.pred2, y = FPD))
+  
 ##################### Add lake ice thickness ########################
 df.full.ice = df.spcH |> 
   left_join(ice.interp, by = join_by(date_time, location_name)) |> 

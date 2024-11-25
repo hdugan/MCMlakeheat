@@ -21,12 +21,12 @@ max.depths = df.spcH %>%
 hypo.join = df.full.ice |> 
   filter(date_time %in% max.depths$date_time) %>% 
   left_join(hypo.use, by = join_by(depth.asl.char, location_name)) %>% 
-  mutate(temp_K = tempUse + 5) %>% # set baseline temperature to -5°C
+  mutate(temp_FPD = tempUse - FPD) %>% # set baseline temperature to -5°C
   mutate(spHeat_J_m3K = spHeat_J_kgK * density_kg_m3) %>% 
   # latent heat of ice = density * thickness *  latent heat of ice (334000 J/kg)
   mutate(LHice_J_m3 = iceDensity_kgm3 * 334000) |> 
   mutate(heatIce_J = LHice_J_m3 * vol_layer_m3) |> 
-  mutate(heat_J = spHeat_J_m3K * vol_layer_m3 * temp_K) %>% 
+  mutate(heat_J = spHeat_J_m3K * vol_layer_m3 * temp_FPD) %>% 
   mutate(heat_J_m2 = heat_J/Area_2D) |> 
   mutate(heat_J_m3 = heat_J/vol_layer_m3) |> 
   # mutate(heat_J_m2 = if_else(Area_2D == 0, 0, heat_J_m2)) |> 
@@ -52,10 +52,10 @@ makeHeat <- function(name, filllimits = c(NA,NA)) {
           legend.title = element_markdown())
 }
 
-h1.epi = makeHeat('Lake Fryxell', filllimits = c(21,47))
-h2.epi = makeHeat('Lake Hoare', filllimits = c(21,47))
-h3.epi = makeHeat('East Lake Bonney', filllimits = c(21,47)) + ylim(45, NA)
-h4.epi = makeHeat('West Lake Bonney', filllimits = c(21,47)) + ylim(45, NA)
+h1.epi = makeHeat('Lake Fryxell', filllimits = c(0,17))
+h2.epi = makeHeat('Lake Hoare', filllimits = c(0,17))
+h3.epi = makeHeat('East Lake Bonney', filllimits = c(0,17)) + ylim(45, NA)
+h4.epi = makeHeat('West Lake Bonney', filllimits = c(0,17)) + ylim(45, NA)
 
 h1.epi + h2.epi + h3.epi + h4.epi + plot_layout(guides = 'collect')
 ggsave('figures/Fig3_HeatContent_epi.png', width = 6, height = 4, dpi = 500)

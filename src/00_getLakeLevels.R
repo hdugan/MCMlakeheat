@@ -91,7 +91,7 @@ ice <- read_csv(infile1) |>
   filter(year(date_time) > 1992) |> 
   filter(lake %in% c('East Lake Bonney', 'West Lake Bonney', 'Lake Fryxell','Lake Hoare')) |> 
   mutate(location_name = lake) |> 
-  select(-lake, -dataset_code, -filename, -density, -tool, -z_diff_m, -comments, -lat, -lon) |> 
+  select(-lake, -dataset_code, -filename, -density, -tool, -z_diff_m, -comments, -lat, -lon) |>
   filter(!(location_name == 'West Lake Bonney' & z_water_m > -2.5)) |> # remove outlier
   filter(!(location_name == 'Lake Fryxell' & date_time == as.Date('2022-11-28'))) |>  # remove outlier
   group_by(location_name, date_time) |> 
