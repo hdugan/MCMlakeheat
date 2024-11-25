@@ -23,9 +23,9 @@ a |>
             Area_2D = first(Area_2D)) |> 
   mutate(heatTot_J_m2 = (heat_J - heatIce_J)/Area_2D/1e6)
 
-# If you warmed the water column 5°C
+# If you warmed the water column 1°C
 a |> 
-  mutate(tempUse = tempUse + 5) |>
+  mutate(tempUse = tempUse + 1) |>
   # mutate(tempUse = if_else(depth.asl >= 14.7 & depth.asl <= 15.7, 0, tempUse)) |>
   mutate(temp_K = tempUse + 5) %>%
   mutate(spHeat_J_m3K = spHeat_J_kgK * density_kg_m3) %>% 

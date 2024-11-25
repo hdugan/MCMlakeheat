@@ -167,19 +167,27 @@ df.spcH |> group_by(location_name) |> summarise(min(spHeat_J_kgK, na.rm = T), ma
 ##################### Add freezing point of water ########################
 # This is complicated because no equation exists for salinities > 40. 
 # Using a lookup table from Bodnar 1993
+# https://www-sciencedirect-com.ezproxy.library.wisc.edu/science/article/pii/001670379390378A?via%3Dihub
 bodnar = read_csv('datain/papers/Bodnar_1993_FreezingPoint_Lookup.csv') %>% 
-  mutate(Salinity = Salinity_1 + Salinity_2) %>% 
-  select(Salinity, FPD) %>% 
-  arrange(Salinity) %>% 
-  mutate(Salinity = as.character(Salinity))
+  mutate(FPD = FPD1+FPD2) %>% 
+  mutate(sal.pred2 = Salinity_perWt * 10) |> 
+  select(sal.pred2, FPD) %>% 
+  arrange(sal.pred2) %>% 
+  filter(!is.na(sal.pred2))
+
+bodnar.poly = lm(FPD ~ poly(sal.pred2, degree = 3), data = bodnar)
+# #create scatterplot
+# df = data.frame(sal.pred2 = 1:213) %>% mutate(my_model = predict(bodnar.poly, .))
+# ggplot(bodnar) + geom_point(aes(x = sal.pred2, y = FPD)) +
+#   geom_point(data = df, aes(x = sal.pred2, y = my_model), col = 'red')
 
 # Lookup table only goes up to eutectic point of pure NaCl (21.2 %wt, FPD = -23.18)
 # Everything above this salinity set FPD to 23.2
 df.spcH = df.spcH %>% 
-  mutate(Salinity = as.character(round(sal.pred2/10, 1))) %>% 
-  left_join(bodnar) %>% 
-  mutate(FPD = if_else(is.na(FPD), 23.2, FPD)) %>% 
-  mutate(FPD = -FPD)
+  ungroup() %>%
+  mutate(FPD = predict(bodnar.poly, .)) |> # predict freezing point depressing based on polynomial
+  mutate(FPD = -FPD) |> 
+  mutate(FPD = if_else(FPD < -21.21, -21.21, FPD)) #eutectic point of NaCl
 
 ggplot(df.spcH) +
   geom_point(aes(x = sal.pred2, y = FPD))
@@ -214,7 +222,7 @@ ct1 = ggplot(df.full.ice) +
             color = 'grey50',size = 0.3) +
   geom_path(aes(x = tempUse, y = depth.asl, group = date_time, color = year(date_time))) +
   ylab('Elevation (m asl)') + xlab('Temperature (°C)') +
-  scale_color_scico(palette = 'bilbao', name = 'Year') +
+  scale_color_scico(palette = 'bilbao', name = 'Year', direction = -1, end = 0.9) +
   theme_bw(base_size = 9) +
   facet_wrap(~location_name, scales = 'free', nrow = 1) +
   new_scale_color() + 
@@ -230,7 +238,7 @@ ct2 = ggplot(df.full.ice) +
             color = 'grey50',size = 0.3) +
   geom_path(aes(x = condUse, y = depth.asl, group = date_time, color = year(date_time))) +
   ylab('Elevation (m asl)') + xlab('Conductivity (mS cm^-1 )') +
-  scale_color_scico(palette = 'bilbao', name = 'Year') +
+  scale_color_scico(palette = 'bilbao', name = 'Year', direction = -1, end = 0.9) +
   theme_bw(base_size = 9) +
   facet_wrap(~location_name, scales = 'free', nrow = 1) +
   theme(axis.title.x = element_markdown())
@@ -253,7 +261,9 @@ useprofile = df.full.ice |>
   select(date_time, depth.asl, location_name, condUse, tempUse) |> 
   rename(initialCond = condUse, initialTemp = tempUse, initialDate = date_time)
 
-diffprofile = df.full.ice |> select(depth.asl, location_name, condUse) |> 
+diffprofile = df.full.ice |> 
+  group_by(date_time, location_name) |> 
+  select(depth.asl, location_name, condUse) |> 
   left_join(useprofile) |> 
   mutate(newCond = condUse - initialCond) |> 
   filter(!is.na(newCond))
@@ -261,20 +271,22 @@ diffprofile = df.full.ice |> select(depth.asl, location_name, condUse) |>
 c2 = ggplot(diffprofile) +
   geom_path(aes(x = newCond, y = depth.asl, group = date_time, color = year(date_time))) +
   ylab('Elevation (m asl)') + xlab('\u0394  Conductivity (mS cm^-1 )') +
-  scale_color_scico(palette = 'bilbao', name = 'Year') +
+  scale_color_scico(palette = 'bilbao', name = 'Year', direction = -1, end = 0.9) +
   theme_bw(base_size = 9) +
   theme(axis.title.x = element_markdown()) +
   facet_wrap(~location_name, scales = 'free', nrow = 1)
 
 # Join
-diffprofile = df.full.ice |> select(depth.asl, location_name, tempUse) |> 
+diffprofile = df.full.ice |> 
+  group_by(date_time, location_name) |> 
+  select(depth.asl, location_name, tempUse) |> 
   left_join(useprofile) |> 
   mutate(newTemp = tempUse - initialTemp) |> 
   filter(!is.na(newTemp))
 c1 = ggplot(diffprofile) +
   geom_path(aes(x = newTemp, y = depth.asl, group = date_time, color = year(date_time))) +
   ylab('Elevation (m asl)') + xlab('\u0394 Temperature (°C)') +
-  scale_color_scico(palette = 'bilbao', name = 'Year') +
+  scale_color_scico(palette = 'bilbao', name = 'Year', direction = -1, end = 0.9) +
   theme_bw(base_size = 9) +
   theme(axis.title.x = element_markdown()) +
   facet_wrap(~location_name, scales = 'free', nrow = 1); c1

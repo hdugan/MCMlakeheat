@@ -37,7 +37,7 @@ hypo.join = df.full.ice |>
 ##################### Plot heat maps #####################
 makeHeat <- function(name, filllimits = c(NA,NA)) {
   ggplot(hypo.join %>% 
-           filter(month(date_time) %in% c(11,12,1)) |> 
+           filter(month(date_time) %in% c(11,12)) |> 
            filter(location_name == name)) + 
     geom_tile(aes(x = date_time, y = depth.asl, fill = heat_J_m3/1e6), width = 150,height = 0.1) +
     geom_tile(data = hypo.join %>% filter(location_name == name & isIce),
@@ -83,12 +83,12 @@ makeTemp <- function(name, filllimits = c(NA,NA)) {
           legend.text = element_text(size = 7),
           legend.key.width = unit(0.2,'cm'))
 }
-h1 = makeTemp('Lake Fryxell')
-h2 = makeTemp('Lake Hoare')
-h3 = makeTemp('East Lake Bonney')
-h4 = makeTemp('West Lake Bonney')
+t1 = makeTemp('Lake Fryxell')
+t2 = makeTemp('Lake Hoare')
+t3 = makeTemp('East Lake Bonney')
+t4 = makeTemp('West Lake Bonney')
 
-h1 + h2 + h3 + h4
+t1 + t2 + t3 + t4
 ggsave('figures/SI_CTD_Temp.png', width = 6, height = 4, dpi = 500)
 
 ##################### Create daily totals #####################
@@ -191,7 +191,13 @@ AA
 BB
 BB
 "
-(h1.epi + h2.epi + h3.epi + h4.epi + plot_layout(guides = 'collect')) / h.ts +
+# (h1.epi + h2.epi + h3.epi + h4.epi + plot_layout(guides = 'collect')) / h.ts +
+#   plot_layout(design = layout) + plot_annotation(tag_levels = 'a', tag_suffix = ')') &
+#   theme(plot.tag = element_text(size = 8))
+# 
+# ggsave('figures/Fig3_HeatContent.png', width = 6, height = 5, dpi = 500)
+
+(h1 + h2 + h3 + h4 ) / h.ts +
   plot_layout(design = layout) + plot_annotation(tag_levels = 'a', tag_suffix = ')') &
   theme(plot.tag = element_text(size = 8))
 
