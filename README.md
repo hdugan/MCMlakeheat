@@ -77,26 +77,16 @@ All "00\_" .R scripts are helper scripts that download raw data from EDI
 `04_GAMs.R`
 
 -   For each lake do the following (limit data to between Sep 1 and Dec 15th)
-
 -   Create gam model of temperature
-
 -   Create gam model of ice thickness (use ice observations not interpolations)
-
 -   Create gam model of lake level (use lake level observations not interpolations)
-
 -   Create monthly dataframe from Oct 1995 to Jan 2024
-
 -   Predict temperature, ice thickness, lake level from GAM at monthly interval
-
 -   Create 95% confidence interval for each model
-
 -   Exclude 2020 (no data collection)
-
 -   For each year, calculate mean temp, ice and lake level data (observational data, not GAM data) between Sep 1 and Dec 15th
-
     -   Calculate difference between years
     -   Using this dataframe, create a series of linear models
-
     ```         
     lm(temp.diff ~ iceZ + ice.diff + LL.diff, data = fit.interp)
     lm(temp.diff ~ LL.diff, data = fit.interp)
@@ -107,18 +97,14 @@ All "00\_" .R scripts are helper scripts that download raw data from EDI
     lm(temp ~ LL + iceZ, data = fit.interp)
     lm(temp ~ LL + iceZ + ice.diff + LL, data = fit.interp)
     ```
-
 -   Output 6 panel figure 'figures/Fig4_GAMS.png'
-
     -   Mean temp (GAM fit line)
     -   Ice thickness (GAM fit line)
     -   Lake and water level (GAM fit line)
     -   Annual temperature difference
     -   Annual ice difference
     -   Annual LL difference
-
 -   Assess model fits
-
     -   Extract AIC, BIC, r2
     -   Get coefficients and significance
     -   Variable Inflation Factors to assess colinearity
