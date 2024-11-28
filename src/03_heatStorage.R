@@ -97,7 +97,7 @@ hypo.join |> filter(location_name == "Lake Hoare") |>
   select(heat_J, heat_J_m2, tempUse) |> 
   summarise(mean(heat_J_m2), min(heat_J_m2), max(heat_J_m2), 
             mean(tempUse), min(tempUse), max(tempUse))
-# For Lake Hoare, Heat J/m2 between 50-55 m ~ 114.9 MJ/m2
+# For Lake Hoare, Heat J/m2 between 50-55 m ~ 95880 J/m2
 # For Lake Hoare, temp °C between 50-55 m ~ 0.223 °C
 
 # Problem is not all casts go deep enough, specifically for Lake Hoare
@@ -114,7 +114,7 @@ fill.gaps.LH = expand.grid(location_name = 'Lake Hoare',
   mutate(tempUse = if_else(is.na(tempUse) &
                               depth.asl < 58, 0.223, tempUse)) |> 
   mutate(heat_J_m2 = if_else(is.na(heat_J_m2) &
-                               depth.asl < 58, 114905039, heat_J_m2)) |> 
+                               depth.asl < 58, 95880, heat_J_m2)) |> 
   mutate(heat_J = if_else(is.na(heat_J) &
                             depth.asl < 58, heat_J_m2*Area_2D, heat_J)) 
 

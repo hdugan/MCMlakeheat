@@ -10,7 +10,6 @@ library(GGally)
 library(olsrr) #collinearity 
 library(Hmisc) #correlation matrix w/ Sig
 
-#!!!! 2005 data from WLB hypo looks too warm
 usecolors =  c('#4477c9', '#e3dc10', '#b34f0c', '#4c944a')
 usecolors = c("#BB9F2F", "#94B9AF", "#942911", "#593837")
 
@@ -44,8 +43,8 @@ for (i in 1:4) {
   ## Fit gam to mean temp data 
   mod.temp <- gam(tempUse ~ s(dec.date, k = usek, bs = 'tp', m = 2), 
                  data = heat.day |> filter(location_name == uselake))
-  mod.vol <- gam(vol ~ s(dec.date, k = usek, bs = 'tp'),
-                  data = heat.day |> filter(location_name == uselake))
+  # mod.vol <- gam(vol ~ s(dec.date, k = usek, bs = 'tp'),
+  #                 data = heat.day |> filter(location_name == uselake))
   
   # Fit GAM to ice
   ice.dec = ice |> mutate(dec.date = decimal_date(date_time)) |> 
@@ -54,7 +53,6 @@ for (i in 1:4) {
   
   mod.ice = gam(z_water_m ~ s(dec.date, k = usek, bs = 'tp', m = 2), 
                data = ice.dec |> filter(location_name == uselake))
-  
   
   # Fit GAM to lake level data 
   ll.dec = ll |> mutate(dec.date = decimal_date(date_time)) |>
@@ -66,7 +64,6 @@ for (i in 1:4) {
   
   summary(mod.ice)
   summary(mod.temp)
-  summary(mod.vol)
   summary(mod.LL)
   
   ## create new data to predict at start of every month
@@ -85,14 +82,12 @@ for (i in 1:4) {
   ## Predict from the fitted model; note we predict from the gam part
   newYear <- newYear |> 
     bind_cols(predict(mod.ice, newYear, se.fit = TRUE)) |> rename(fit.ice = fit, se.fit.ice = se.fit) |> 
-    bind_cols(predict(mod.temp, newYear, se.fit = TRUE)) |> rename(fit.temp = fit, se.fit.temp = se.fit) |> 
-    bind_cols(predict(mod.vol, newYear, se.fit = TRUE)) |> rename(fit.vol = fit, se.fit.vol = se.fit) |> 
+    bind_cols(predict(mod.temp, newYear, se.fit = TRUE)) |> rename(fit.temp = fit, se.fit.temp = se.fit) |>     
     bind_cols(predict(mod.LL, newYear, se.fit = TRUE)) |> rename(fit.LL = fit, se.fit.LL = se.fit) 
   
   ## Create the 95% confidence interval, get critical t-value 
   crit.t.ice <- qt(0.975, df = df.residual(mod.ice))
   crit.t.temp = qt(0.975, df = df.residual(mod.temp))
-  crit.t.vol = qt(0.975, df = df.residual(mod.vol))
   crit.t.LL = qt(0.975, df = df.residual(mod.LL))
   
   # For a two-sided confidence interval, multiply the critical value by the sample's standard error of the mean
@@ -100,8 +95,6 @@ for (i in 1:4) {
                        lower.ice = fit.ice - (crit.t.ice * se.fit.ice)) |> 
     mutate(upper.temp = fit.temp + (crit.t.temp * se.fit.temp),
            lower.temp = fit.temp - (crit.t.temp * se.fit.temp)) |> 
-    mutate(upper.vol = fit.vol + (crit.t.vol * se.fit.vol),
-           lower.vol = fit.vol - (crit.t.vol * se.fit.vol)) |> 
     mutate(upper.LL = fit.LL + (crit.t.LL * se.fit.LL),
            lower.LL = fit.LL - (crit.t.LL * se.fit.LL)) 
   
@@ -111,15 +104,11 @@ for (i in 1:4) {
     mutate(across(-date_time, ~ ifelse(year(date_time) == 2020, NA, .))) |> 
     mutate(fit.WL = fit.LL + fit.ice) |> 
     select(date_time, dec.date, fit.ice, fit.temp, fit.LL, fit.WL)
-    # mutate(ice.diff = c(NA,diff(fit.ice))) |> 
-    # mutate(temp.diff = c(NA,diff(fit.temp))) |> 
-    # mutate(LL.diff = c(NA,diff(fit.LL))) |> 
-    # mutate(WL.diff = c(NA,diff(fit.WL)))
-
+    
   output.predict[[i]] = newYear |> mutate(location_name = uselake)
   output.predict.dec[[i]] = newYear2 |> mutate(location_name = uselake) 
 
- # Take mean of sampled datas for temp, ice, and lake level 
+ # Take mean of sampled data for temp, ice, and lake level 
   fit.interp = 
     data.frame(year = 1995:2024, dec.date = 1995:2024 + 0.9) |>
     left_join(
@@ -253,22 +242,6 @@ p1/p2/p3/p5/p6/p7 +
   theme(plot.tag = element_text(size = 8))
 ggsave(paste0('figures/Fig4_GAMS.png'), width = 6.5, height = 7, dpi = 500)
 
-################ Synchrony between timeseries #################
-
-#Syncrony between timeseries of ice thickness
-sync2 = data.frame(date_time = output.predict.dec[[3]]$date_time, 
-                   LF_ice = c(output.predict.dec[[1]]$fit.ice), 
-                   LH_ice = c(output.predict.dec[[2]]$fit.ice,NA), 
-                   ELB_ice = output.predict.dec[[3]]$fit.ice, 
-                   WLB_ice = output.predict.dec[[4]]$fit.ice)
-
-# Create a scatterplot matrix using ggpairs()
-sync2 |> pivot_longer(cols = 2:5) |> 
-  ggplot() +
-  geom_path(aes(x = date_time, y = value, col = name)) +
-  ylab('Temp Diff (°C)') +
-  scale_color_manual(values = usecolors) +
-  theme_bw(base_size = 9)
 
 ################ Assess model fits #################
 getCoeffs <- function(i, usefit) {

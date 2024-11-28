@@ -160,60 +160,59 @@ latexTable(sync2.out, usecols = 5)
 ########################## Autocorrelation in timeseries ##############################
 for (i in 1:4) {
   uselake = lakecolor$uselake[i]
-  nrows = length(output.predict.dec[[i]]$temp.diff[-1])
-  print(acf(output.predict.dec[[i]]$temp.diff[-1], main = uselake, ci = 0.99))
+  nrows = length(interp.out[[i]]$temp.diff[-1])
+  print(acf(interp.out[[i]]$temp.diff[-1], main = uselake, ci = 0.99, na.action = na.pass))
   # Compute confidence interval 
   # Use 95 or 99% confidence? 
   ci = qnorm((1 + 0.99)/2)/sqrt(nrows)
   
-  sig = acf(output.predict.dec[[i]]$temp.diff[-1], plot = F)$acf[2] > ci
+  sig = acf(interp.out[[i]]$temp.diff[-1], plot = F, na.action = na.pass)$acf[2] > ci
   print(paste0(uselake, ' acf temp.diff: ', sig))
-  
 }
 
 for (i in 1:4) {
   uselake = lakecolor$uselake[i]
-  nrows = length(output.predict.dec[[i]]$ice.diff[-1])
-  print(acf(output.predict.dec[[i]]$ice.diff[-1], main = uselake, ci = 0.99))
+  nrows = length(interp.out[[i]]$ice.diff[-1])
+  print(acf(interp.out[[i]]$ice.diff[-1], main = uselake, ci = 0.99, na.action = na.pass))
   # Compute confidence interval 
   # Use 95 or 99% confidence? 
   ci = qnorm((1 + 0.99)/2)/sqrt(nrows)
   
-  sig = acf(output.predict.dec[[i]]$ice.diff[-1], plot = F)$acf[2] > ci
+  sig = acf(interp.out[[i]]$ice.diff[-1], plot = F, na.action = na.pass)$acf[2] > ci
   print(paste0(uselake, ' acf ice.diff: ', sig))
 }
 
 for (i in 1:4) {
   uselake = lakecolor$uselake[i]
-  nrows = length(output.predict.dec[[i]]$LL.diff[-1])
-  print(acf(output.predict.dec[[i]]$LL.diff[-1], main = uselake, ci = 0.99))
+  nrows = length(interp.out[[i]]$LL.diff[-1])
+  print(acf(interp.out[[i]]$LL.diff[-1], main = uselake, ci = 0.99, na.action = na.pass))
   # Compute confidence interval 
   # Use 95 or 99% confidence? 
   ci = qnorm((1 + 0.99)/2)/sqrt(nrows)
   
-  sig = acf(output.predict.dec[[i]]$LL.diff[-1], plot = F)$acf[2] > ci
+  sig = acf(interp.out[[i]]$LL.diff[-1], plot = F, na.action = na.pass)$acf[2] > ci
   print(paste0(uselake, ' acf ll.diff: ', sig))
 }
 
 ################################ Variable-lag Granger Causality ################################
 for (i in 1:4) {
   print(i)
-  print(VLTimeCausality::VLGrangerFunc(Y = output.predict.dec[[i]]$fit.temp, X = output.predict.dec[[i]]$fit.ice, gamma = 0.5)$XgCsY)
-  print(VLTimeCausality::VLGrangerFunc(Y = output.predict.dec[[i]]$fit.temp, X = output.predict.dec[[i]]$fit.LL, gamma = 0.5)$XgCsY)
-  print(VLTimeCausality::VLGrangerFunc(Y = output.predict.dec[[i]]$fit.temp, X = output.predict.dec[[i]]$ice.diff, gamma = 0.5)$XgCsY)
-  print(VLTimeCausality::VLGrangerFunc(Y = output.predict.dec[[i]]$fit.temp, X = output.predict.dec[[i]]$LL.diff, gamma = 0.5)$XgCsY)
+  print(VLTimeCausality::VLGrangerFunc(Y = interp.out[[i]]$temp, X = interp.out[[i]]$iceZ, gamma = 0.5)$XgCsY)
+  print(VLTimeCausality::VLGrangerFunc(Y = interp.out[[i]]$temp, X = interp.out[[i]]$LL, gamma = 0.5)$XgCsY)
+  print(VLTimeCausality::VLGrangerFunc(Y = interp.out[[i]]$temp, X = interp.out[[i]]$ice.diff, gamma = 0.5)$XgCsY)
+  print(VLTimeCausality::VLGrangerFunc(Y = interp.out[[i]]$temp, X = interp.out[[i]]$LL.diff, gamma = 0.5)$XgCsY)
   
 }
 
 for (i in 1:4) {
   print(i)
-  print(VLTimeCausality::VLGrangerFunc(Y = output.predict.dec[[i]]$fit.temp, X = output.predict.dec[[i]]$fit.ice, gamma = 0.5)$XgCsY)
-  print(VLTimeCausality::VLGrangerFunc(Y = output.predict.dec[[i]]$fit.temp, X = lead(output.predict.dec[[i]]$fit.ice), gamma = 0.5)$XgCsY)
+  print(VLTimeCausality::VLGrangerFunc(Y = interp.out[[i]]$temp, X = interp.out[[i]]$iceZ, gamma = 0.5)$XgCsY)
+  print(VLTimeCausality::VLGrangerFunc(Y = interp.out[[i]]$temp, X = lead(interp.out[[i]]$iceZ), gamma = 0.5)$XgCsY)
 }
 
 for (i in 1:4) {
   print(i)
-  print(VLTimeCausality::VLGrangerFunc(Y = output.predict.dec[[i]]$temp.diff, X = output.predict.dec[[i]]$fit.ice, gamma = 0.5)$XgCsY)
-  print(VLTimeCausality::VLGrangerFunc(Y = output.predict.dec[[i]]$temp.diff, X = lead(output.predict.dec[[i]]$fit.ice), gamma = 0.5)$XgCsY)
+  print(VLTimeCausality::VLGrangerFunc(Y = interp.out[[i]]$temp.diff, X = interp.out[[i]]$iceZ, gamma = 0.5)$XgCsY)
+  print(VLTimeCausality::VLGrangerFunc(Y = interp.out[[i]]$temp.diff, X = lead(interp.out[[i]]$iceZ), gamma = 0.5)$XgCsY)
 }
 

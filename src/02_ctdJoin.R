@@ -15,7 +15,7 @@ source('src/00_getCTD.R')
 source('src/00_gethypso.R')
 source('src/functions/SpecHeat_Water.R')
 
-# Create SpecCond at 0.1 increments every 0.1 m
+# Round depth to 0.1 m increment
 ctd.join = ctd |> 
   mutate(year = year(date_time)) |> 
   select(date_time, year, location_name, masl.approx, depth.asl, depth_m, ctd_conductivity_mscm, ctd_temp_c) |> 

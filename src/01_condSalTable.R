@@ -3,7 +3,7 @@ library(tidyverse)
 library(lubridate)
 library(mgcv)
 
-# source lake lakels
+# source raw data
 source('src/00_getIons.R')
 
 ############ Cond - Salinity transfer function ###############
