@@ -161,10 +161,10 @@ latexTable(sync2.out, usecols = 5)
 for (i in 1:4) {
   uselake = lakecolor$uselake[i]
   nrows = length(interp.out[[i]]$temp.diff[-1])
-  print(acf(interp.out[[i]]$temp.diff[-1], main = uselake, ci = 0.99, na.action = na.pass))
+  print(acf(interp.out[[i]]$temp.diff[-1], main = uselake, ci = 0.95, na.action = na.pass))
   # Compute confidence interval 
   # Use 95 or 99% confidence? 
-  ci = qnorm((1 + 0.99)/2)/sqrt(nrows)
+  ci = qnorm((1 + 0.95)/2)/sqrt(nrows)
   
   sig = acf(interp.out[[i]]$temp.diff[-1], plot = F, na.action = na.pass)$acf[2] > ci
   print(paste0(uselake, ' acf temp.diff: ', sig))
@@ -173,10 +173,10 @@ for (i in 1:4) {
 for (i in 1:4) {
   uselake = lakecolor$uselake[i]
   nrows = length(interp.out[[i]]$ice.diff[-1])
-  print(acf(interp.out[[i]]$ice.diff[-1], main = uselake, ci = 0.99, na.action = na.pass))
+  print(acf(interp.out[[i]]$ice.diff[-1], main = uselake, ci = 0.95, na.action = na.pass))
   # Compute confidence interval 
   # Use 95 or 99% confidence? 
-  ci = qnorm((1 + 0.99)/2)/sqrt(nrows)
+  ci = qnorm((1 + 0.95)/2)/sqrt(nrows)
   
   sig = acf(interp.out[[i]]$ice.diff[-1], plot = F, na.action = na.pass)$acf[2] > ci
   print(paste0(uselake, ' acf ice.diff: ', sig))
@@ -185,10 +185,10 @@ for (i in 1:4) {
 for (i in 1:4) {
   uselake = lakecolor$uselake[i]
   nrows = length(interp.out[[i]]$LL.diff[-1])
-  print(acf(interp.out[[i]]$LL.diff[-1], main = uselake, ci = 0.99, na.action = na.pass))
+  print(acf(interp.out[[i]]$LL.diff[-1], main = uselake, ci = 0.95, na.action = na.pass))
   # Compute confidence interval 
   # Use 95 or 99% confidence? 
-  ci = qnorm((1 + 0.99)/2)/sqrt(nrows)
+  ci = qnorm((1 + 0.95)/2)/sqrt(nrows)
   
   sig = acf(interp.out[[i]]$LL.diff[-1], plot = F, na.action = na.pass)$acf[2] > ci
   print(paste0(uselake, ' acf ll.diff: ', sig))
@@ -215,4 +215,19 @@ for (i in 1:4) {
   print(VLTimeCausality::VLGrangerFunc(Y = interp.out[[i]]$temp.diff, X = interp.out[[i]]$iceZ, gamma = 0.5)$XgCsY)
   print(VLTimeCausality::VLGrangerFunc(Y = interp.out[[i]]$temp.diff, X = lead(interp.out[[i]]$iceZ), gamma = 0.5)$XgCsY)
 }
+
+###################### Table 1 ############################
+ctd.join |> 
+  group_by(location_name) |> 
+  mutate(location_name = factor(location_name, levels = c('Lake Fryxell','Lake Hoare', 'East Lake Bonney', 'West Lake Bonney'))) |> 
+  summarise(minT = min(ctd_temp_c, na.rm = T), maxT = max(ctd_temp_c, na.rm = T),
+            minC = min(ctd_conductivity_mscm, na.rm = T), maxC = max(ctd_conductivity_mscm, na.rm = T))
+
+###################### FLOOD YEAR LAKE LEVEL RISE ############################
+ll |> filter(year(date_time) %in% c(2001,2002)) |> 
+  arrange(location_name) |> 
+  group_by(location_name) |> 
+  summarise(minLL = min(masl), maxLL = max(masl)) |> 
+  mutate(diff = maxLL - minLL)
+
 

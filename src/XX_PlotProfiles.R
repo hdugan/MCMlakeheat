@@ -1,14 +1,14 @@
 
 
-test = df.full.ice |> filter(location_name == 'West Lake Bonney')
+test = ctd |> filter(location_name == 'West Lake Bonney') |> group_by(date_time)
 for (i in 1:100) {
   
   ggplot(test |> filter(cur_group_id() <= i)) +
     # geom_rect(data = icebox |> filter(location_name == 'Lake Fryxell'),
     #           aes(xmin = ctd_temp_c, xmax = ctd_temp_c, ymin = max.depth, ymax = min.depth, group = year(date_time)), 
     #           color = 'grey50',size = 0.3) +
-    geom_path(aes(x = tempUse, y = depth.asl, group = date_time, color = year(date_time))) +
-    geom_path(data = test |> filter(cur_group_id() == i), aes(x = tempUse, y = depth.asl), color = 'gold', linewidth = 2) +
+    geom_path(aes(x = ctd_temp_c, y = depth.asl, group = date_time, color = year(date_time))) +
+    geom_path(data = test |> filter(cur_group_id() == i), aes(x = ctd_temp_c, y = depth.asl), color = 'gold', linewidth = 2) +
     ylab('Elevation (m asl)') + xlab('Temperature (°C)') +
     scale_colour_viridis_c(option = 'F', name = 'Year') +
     theme_bw(base_size = 9) +

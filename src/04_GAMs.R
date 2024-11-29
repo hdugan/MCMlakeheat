@@ -240,7 +240,7 @@ p1/p2/p3/p5/p6/p7 +
   plot_layout(heights = c(1.5,1.5,1.5,1,1,1)) +
   plot_annotation(tag_levels = 'a', tag_suffix = ')') &
   theme(plot.tag = element_text(size = 8))
-ggsave(paste0('figures/Fig4_GAMS.png'), width = 6.5, height = 7, dpi = 500)
+ggsave(paste0('figures/Fig5_GAMS.png'), width = 6.5, height = 7, dpi = 500)
 
 
 ################ Assess model fits #################

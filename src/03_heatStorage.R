@@ -48,17 +48,17 @@ makeHeat <- function(name, filllimits = c(NA,NA)) {
     theme_bw(base_size = 9) +
     theme(axis.title.x = element_blank(),
           legend.text = element_text(size = 7),
-          legend.key.width = unit(0.2,'cm'),
+          legend.key.width = unit(0.15,'cm'),
           legend.title = element_markdown())
 }
 
-h1.epi = makeHeat('Lake Fryxell', filllimits = c(0,17))
-h2.epi = makeHeat('Lake Hoare', filllimits = c(0,17))
-h3.epi = makeHeat('East Lake Bonney', filllimits = c(0,17)) + ylim(45, NA)
-h4.epi = makeHeat('West Lake Bonney', filllimits = c(0,17)) + ylim(45, NA)
-
-h1.epi + h2.epi + h3.epi + h4.epi + plot_layout(guides = 'collect')
-ggsave('figures/Fig3_HeatContent_epi.png', width = 6, height = 4, dpi = 500)
+# h1.epi = makeHeat('Lake Fryxell', filllimits = c(0,17))
+# h2.epi = makeHeat('Lake Hoare', filllimits = c(0,17))
+# h3.epi = makeHeat('East Lake Bonney', filllimits = c(0,17)) + ylim(45, NA)
+# h4.epi = makeHeat('West Lake Bonney', filllimits = c(0,17)) + ylim(45, NA)
+# 
+# h1.epi + h2.epi + h3.epi + h4.epi + plot_layout(guides = 'collect')
+# ggsave('figures/Fig3_HeatContent_epi.png', width = 6, height = 4, dpi = 500)
 
 h1 = makeHeat('Lake Fryxell')
 h2 = makeHeat('Lake Hoare')
@@ -66,7 +66,7 @@ h3 = makeHeat('East Lake Bonney')
 h4 = makeHeat('West Lake Bonney')
 
 h1 + h2 + h3 + h4
-ggsave('figures/SI_HeatContent_full.png', width = 6, height = 4, dpi = 500)
+ggsave('figures/Fig3_HeatMap.png', width = 6, height = 4, dpi = 500)
 
 makeTemp <- function(name, filllimits = c(NA,NA)) {
   ggplot(hypo.join %>% 
@@ -157,6 +157,40 @@ heat.day = heat.day |>
 # yday(as.Date('1997-12-01'))
 
 ######### Plot timeseries ##########
+h.ice = ggplot(heat.day) +
+  geom_smooth(data = heat.day |> filter(year(date_time) <= 2020),
+              aes(x = date_time, y = -heatIce_J/Area_2D/1e6, color = location_name), method = 'gam', se = FALSE, 
+              formula = y ~ s(x, k = 25, bs = "tp", m = 1)) +
+  geom_smooth(data = heat.day |> filter(year(date_time) > 2020),
+              aes(x = date_time, y = -heatIce_J/Area_2D/1e6, color = location_name), method = 'lm', se = FALSE) +
+  # geom_point(data = heat.day_DecJan, 
+  #            aes(x = date_time, y = -heatIce_J/Area_2D/1e6, fill = location_name), shape = 22, stroke = 0.2, alpha = 0.5) +
+  # geom_point(aes(x = date_time, y = -heatIce_J/Area_2D/1e6, fill = location_name), shape = 21, stroke = 0.2, size = 1.2) +
+  scale_color_manual(values = usecolors, name = 'Lake') +
+  scale_fill_manual(values = usecolors, name = 'Lake') +
+  ylab('Latent Heat Ice (MJ m^-2 )') +
+  theme_bw(base_size = 9) +
+  theme(axis.title.x = element_blank(),
+        axis.title.y = element_markdown(),
+        legend.position = 'none'); h.ice
+
+h.wc = ggplot(heat.day) +
+  geom_smooth(data = heat.day |> filter(year(date_time) <= 2020),
+              aes(x = date_time, y = heat_J/Area_2D/1e6, color = location_name), method = 'gam', se = FALSE, 
+              formula = y ~ s(x, k = 25, bs = "tp", m = 1)) +
+  geom_smooth(data = heat.day |> filter(year(date_time) > 2020),
+              aes(x = date_time, y = heat_J/Area_2D/1e6, color = location_name), method = 'lm', se = FALSE) +
+  # geom_point(data = heat.day_DecJan, 
+  #            aes(x = date_time, y = heat_J/Area_2D/1e6, fill = location_name), shape = 22, stroke = 0.2, alpha = 0.5) +
+  # geom_point(aes(x = date_time, y = heat_J/Area_2D/1e6, fill = location_name), shape = 21, stroke = 0.2, size = 1.2) +
+  scale_color_manual(values = usecolors, name = 'Lake') +
+  scale_fill_manual(values = usecolors, name = 'Lake') +
+  ylab('Heat in Water (MJ m^-2 )') +
+  theme_bw(base_size = 9) +
+  theme(axis.title.x = element_blank(),
+        axis.title.y = element_markdown(),
+        legend.position = 'none'); h.wc
+
 h.ts = ggplot(heat.day) +
   geom_smooth(data = heat.day |> filter(year(date_time) <= 2020),
               aes(x = date_time, y = heatTot_J_m2/1e6, color = location_name), method = 'gam', 
@@ -178,38 +212,33 @@ h.ts = ggplot(heat.day) +
         legend.key.size = unit(0.2,'cm'),
         legend.margin = margin(0, 0, 0, 0)); h.ts
 
-
-ggsave('figures/Fig2_Heat_TimeSeries.png', width = 4, height = 2.5, dpi = 500)
-
-(h1.epi + h2.epi + h3.epi + h4.epi + plot_layout(guides = 'collect')) 
+# ggsave('figures/Fig2_Heat_TimeSeries.png', width = 4, height = 2.5, dpi = 500)
 
 # Combine heat plots 
 layout <- "
-AA
-AA
-AA
-BB
-BB
+AB
+AB
+CC
+CC
+CC
 "
-# (h1.epi + h2.epi + h3.epi + h4.epi + plot_layout(guides = 'collect')) / h.ts +
-#   plot_layout(design = layout) + plot_annotation(tag_levels = 'a', tag_suffix = ')') &
-#   theme(plot.tag = element_text(size = 8))
-# 
-# ggsave('figures/Fig3_HeatContent.png', width = 6, height = 5, dpi = 500)
 
-(h1 + h2 + h3 + h4 ) / h.ts +
+h.ice / h.wc / h.ts +
   plot_layout(design = layout) + plot_annotation(tag_levels = 'a', tag_suffix = ')') &
   theme(plot.tag = element_text(size = 8))
 
-ggsave('figures/Fig3_HeatContent.png', width = 6, height = 5, dpi = 500)
+ggsave('figures/Fig4_HeatContent.png', width = 6, height = 4, dpi = 500)
 
 # Output heat data. 
 write_csv(heat.day, 'dataout/MDVLakes_dailyHeatStorage.csv')
 
 # results for paper 
-heat.day |> group_by(location_name) |> 
-  summarise(min(heatTot_J_m2/1e6), max(heatTot_J_m2/1e6))
-
 hypo.join |> group_by(location_name) |> 
-  summarise(minHeat = min(heat_J_m3/1e6, na.rm = T), maxHeat = max(heat_J_m3/1e6, na.rm = T))
+  summarise(minHeat3 = min(heat_J_m3/1e6, na.rm = T), maxHeat3 = max(heat_J_m3/1e6, na.rm = T))
+
+heat.day |> group_by(location_name) |> 
+  summarise(minHeat2 = min(heatTot_J_m2/1e6, na.rm = T), maxHeat2 = max(heatTot_J_m2/1e6, na.rm = T),
+            minIce = min(-heatIce_J/Area_2D/1e6, na.rm = T), maxIce = max(-heatIce_J/Area_2D/1e6, na.rm = T),
+            minWC = min(heat_J/Area_2D/1e6, na.rm = T), maxWC = max(heat_J/Area_2D/1e6, na.rm = T))
+
 
