@@ -137,7 +137,7 @@ ll.interp |> group_by(location_name) |>
 ggplot(ll.interp) +
   geom_path(aes(x = date_time, y = masl.approx), col = 'lightblue4') +
   geom_point(aes(x = date_time, y = masl, fill = location_name), shape = 21, stroke = 0.2) +
-  scale_fill_manual(values = c('#4477c9', '#e3dc10', '#b34f0c','#4c944a'), name = 'Lake') +
+  scale_fill_manual(values = c("#BB9F2F", "#94B9AF", "#942911", "#593837"), name = 'Lake') +
   facet_wrap(~location_name, scales = 'free', nrow = 4) +
   ylab('Lake Level (m asl)') +
   theme_bw(base_size = 9) +
@@ -150,8 +150,8 @@ ggplot(ice.interp) +
   geom_path(aes(x = date_time, y = -ice.approx, color = location_name)) +
   geom_point(data = ice, aes(x = date_time, y = -z_water_m, fill = location_name), shape = 21, stroke = 0.2, size = 1) +
   # geom_path(aes(x = date_time, y = ice.approx)) +
-  scale_color_manual(values = c('#4477c9', '#e3dc10', '#b34f0c', '#4c944a'), name = 'Lake') +
-  scale_fill_manual(values = c('#4477c9', '#e3dc10', '#b34f0c', '#4c944a'), name = 'Lake') +
+  scale_color_manual(values = c("#BB9F2F", "#94B9AF", "#942911", "#593837"), name = 'Lake') +
+  scale_fill_manual(values = c("#BB9F2F", "#94B9AF", "#942911", "#593837"), name = 'Lake') +
   ylab('Ice Thickness (m)') +
   theme_bw(base_size = 9) +
   # facet_wrap(~location_name, scales = 'free', nrow = 1) +
@@ -162,7 +162,7 @@ ggplot(ice.interp) +
         legend.key.size = unit(0.2,'cm'),
         legend.margin = margin(0, 0, 0, 0))
 
-ggsave('figures/SI_IceThickness.png', width = 6, height = 2, dpi = 500)
+ggsave('figures/SI_IceThickness.png', width = 6, height = 4, dpi = 500)
 
 
 ggplot(lake.volume) +
@@ -173,8 +173,8 @@ ggplot(lake.volume) +
               method = 'gam', formula = y ~ s(x, bs = "cs", k = 15)) + #k = number of inflection points
   geom_point(data = lake.volume.ice, aes(x = date_time, y = cum_vol_m3_ice, fill = location_name), shape = 22, stroke = 0.2, size = 1) +
   # geom_path(aes(x = date_time, y = ice.approx)) +
-  scale_color_manual(values = c('#4477c9', '#e3dc10', '#b34f0c', '#4c944a'), name = 'Lake') +
-  scale_fill_manual(values = c('#4477c9', '#e3dc10', '#b34f0c', '#4c944a'), name = 'Lake') +
+  scale_color_manual(values = c("#BB9F2F", "#94B9AF", "#942911", "#593837"), name = 'Lake') +
+  scale_fill_manual(values = c("#BB9F2F", "#94B9AF", "#942911", "#593837"), name = 'Lake') +
   ylab('Volume (m^3 )') +
   theme_bw(base_size = 9) +
   facet_wrap(~location_name, scales = 'free', nrow = 4) +
