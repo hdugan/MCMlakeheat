@@ -48,6 +48,7 @@ for (i in 1:4) {
   
   # Fit GAM to ice
   ice.dec = ice |> mutate(dec.date = decimal_date(date_time)) |> 
+    mutate(z_water_m = - z_water_m) |> 
     filter(yday(date_time) >= 244 & yday(date_time) <= 350) |> # Between Sep 1 and Dec 15 for all lakes 
     mutate(location_name = factor(location_name, levels = c('Lake Fryxell','Lake Hoare', 'East Lake Bonney', 'West Lake Bonney'))) 
   
@@ -133,6 +134,7 @@ for (i in 1:4) {
     mutate(LL.diff = c(NA,diff(LL)))
   
   interp.out[[i]] = fit.interp |> mutate(location_name = uselake) 
+  
   ########################################### FIT 1 #####################################################
   output.fit1[[i]] <- lm(temp.diff ~ iceZ + ice.diff + LL.diff, data = fit.interp)
   output.fit2[[i]] <- lm(temp.diff ~ LL.diff, data = fit.interp)
@@ -278,7 +280,7 @@ getCoeffs <- function(i, usefit) {
   # VIFs 
   if(nrow(coeffs_df) >= 2) {
     out.coeffs = coeffs_df |> left_join(
-      data.frame(Lake = lakecolor$uselake[i]) |> 
+      data.frame(Lake = lakecolor$lakeAbbr[i]) |> 
       bind_cols(ols_vif_tol(usefit[[i]])) |> 
         rename(Parameter = Variables))
   } else {
@@ -316,21 +318,47 @@ latexTable <- function(coefffit, usecols = 8) {
         latex.environments = "center")
 }
 
-# latexTable(coeffs_fit5)
+# Supplemental Table for Manuscript 
 latexTable(coeffs_fit1 |> bind_rows(coeffs_fit2) |> bind_rows(coeffs_fit3) |> bind_rows(coeffs_fit3.5) |>
   mutate(Lake = factor(Lake, levels = c('LF','LH','ELB','WLB'))) |> 
   arrange(Lake), usecols = 9)
 
+# Supplemental Table for Manuscript 
 latexTable(coeffs_fit5.5 |> bind_rows(coeffs_fit5) |> bind_rows(coeffs_fit4) |>
              mutate(Lake = factor(Lake, levels = c('LF','LH','ELB','WLB'))) |> 
              arrange(Lake), usecols = 9)
 
-# latexTable(coeffs_fit1, usecols = 9)
-# latexTable(coeffs_fit2, usecols = 7)
-# latexTable(coeffs_fit3, usecols = 7)
-# latexTable(coeffs_fit3.5, usecols = 7)
-# 
-# latexTable(coeffs_fit5.5, usecols = 9)
-# latexTable(coeffs_fit4, usecols = 7)
-# latexTable(coeffs_fit5, usecols = 7)
+# Table for Manuscript 
+#### r values for model correlation using "pearson" method ####
+cor1 = round(cor(interp.out[[2]]$temp.diff, interp.out[[2]]$ice.diff, use = 'pairwise.complete.obs'),3)
+cor2 = round(cor(interp.out[[3]]$temp.diff, interp.out[[3]]$iceZ, use = 'pairwise.complete.obs'),3)
+cor3 = round(cor(interp.out[[4]]$temp.diff, interp.out[[4]]$iceZ, use = 'pairwise.complete.obs'),3)
+latexTable(coeffs_fit3 |> filter(Lake == 'LH') |> mutate(r = cor1) |> 
+             bind_rows(coeffs_fit3.5 |> 
+                         filter(Lake %in% c('ELB','WLB')) |> 
+                         mutate(r = c(cor2, cor3))) |>
+             mutate(Lake = factor(Lake, levels = c('LF','LH','ELB','WLB'))) |> 
+             arrange(Lake), usecols = 8)
+
+
+
+cor4 = round(cor(interp.out[[1]]$temp, interp.out[[1]]$LL, use = 'pairwise.complete.obs'),3)
+cor5 = round(cor(interp.out[[1]]$temp, interp.out[[1]]$iceZ, use = 'pairwise.complete.obs'),3)
+cor6 = round(cor(interp.out[[2]]$temp, interp.out[[2]]$iceZ, use = 'pairwise.complete.obs'),3)
+cor7 = round(cor(interp.out[[3]]$temp, interp.out[[3]]$LL, use = 'pairwise.complete.obs'),3)
+cor8 = round(cor(interp.out[[4]]$temp, interp.out[[4]]$LL, use = 'pairwise.complete.obs'),3)
+round(cor(interp.out[[4]]$temp, interp.out[[4]]$iceZ, use = 'pairwise.complete.obs'),3)
+
+latexTable(coeffs_fit5.5 |> filter(Lake == 'LF') |> 
+             select(-Tolerance, -VIF) |> 
+             mutate(r = c(cor4, cor5)) |> 
+             bind_rows(coeffs_fit5 |> 
+                         filter(Lake == 'LH') |> 
+                         mutate(r = cor6)) |> 
+             bind_rows(coeffs_fit4 |> 
+                         filter(Lake %in% c('ELB','WLB')) |> 
+                         mutate(r = c(cor7, cor8))) |>
+             mutate(Lake = factor(Lake, levels = c('LF','LH','ELB','WLB'))) |> 
+             arrange(Lake), usecols = 8)
+
 

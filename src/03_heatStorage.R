@@ -140,8 +140,8 @@ heat.day = hypo.fill |>
   ungroup() |> 
   mutate(location_name = factor(location_name, levels = c('Lake Fryxell','Lake Hoare', 'East Lake Bonney', 'West Lake Bonney'))) |> 
   mutate(dec.date = decimal_date(date_time), yday = yday(date_time)) |> 
-  mutate(yday = if_else(yday > 200, yday, yday+365)) 
-  # mutate(tempUse = if_else(location_name == 'West Lake Bonney' & year(date_time) == 2005, NA, tempUse)) 
+  mutate(yday = if_else(yday > 200, yday, yday+365)) |> 
+  mutate(ice.approx = - ice.approx) # change ice to positive value
 
 heat.day_DecJan = heat.day |>
   filter(yday(date_time) < 244 | yday(date_time) > 350) # past Dec 15th

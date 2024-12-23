@@ -39,6 +39,7 @@ All "00\_" .R scripts are helper scripts that download raw data from EDI
     -   Use 2019 data from 2020-2023
     -   Where transfer table doesn't go deep enough, interpolate with down last value
 -   Add specific heat capacity using `SW_SpcHeat` function
+    -  Rewritten in R from a MATLAB implementation {Source: https://web.mit.edu/seawater/}
 -   Add density using `sw_dens` function
 -   Add freezing point by using lookup table 'datain/papers/Bodnar_1993_FreezingPoint_Lookup.csv'
     -   Create 3rd degree polynomial from lookup table
