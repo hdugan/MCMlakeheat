@@ -4,24 +4,6 @@
 
 All "00\_" .R scripts are helper scripts that download raw data from EDI
 
-`01_condSalTable.R`
-
--   Calls `00_getIons.R` script:
-    -   Downloads discrete water sample data for ion concentrations, DIC, pH
-    -   Downloads CTD data
-    -   Joins discrete data with profiles within 1 week of each other
-    -   Uses temp, DIC, pH to estimate carbonate/bicarbonate concentrations
-    -   Calculates salinity as total mass of major ions
--   Creates specific conductance:salinity transfer function (gam function)
--   Outputs 'dataout/condSalTransfer.csv'
--   Outputs 'SI_SpC_Salinity.png'
-
-`01_salinityTransferTable.R`
-
--   Creates a salinity transfer table of depth to salinity
--   To be used for ELB at depth when conductance relationship breaks down
--   Outputs 'dataout/salinityTransferTable.csv'
-
 `02_ctdJoin.R`
 
 -   Retrieves ctd data using `00_getCTD.R`
@@ -31,13 +13,8 @@ All "00\_" .R scripts are helper scripts that download raw data from EDI
     -   Round to 0.1 m depth increment
     -   Interpolate any gaps larger than 5 m
     -   Remove any profile with less than 10 data points
--   Add salinity
--   Calculate specific conductance relative to 5°C, and round to nearest 0.1 mS/cm (0.01 mS/cm for Lake Hoare)
--   Join with conductance:salinity transfer table 'dataout/condSalTransfer.csv'
--   For ELB, with salinities above 180, join with `salinityTransferTable.csv`
-    -   Use 1995 data for 1993-1994
-    -   Use 2019 data from 2020-2023
-    -   Where transfer table doesn't go deep enough, interpolate with down last value
+-   Add salinity using UNESCO and Spigel and Priscu equations [SP96]
+-   Add density using UNESCO equations, back calculating from SP96 for bottom of ELB
 -   Add specific heat capacity using `SW_SpcHeat` function
     -  Rewritten in R from a MATLAB implementation {Source: https://web.mit.edu/seawater/}
 -   Add density using `sw_dens` function
@@ -56,8 +33,9 @@ All "00\_" .R scripts are helper scripts that download raw data from EDI
 
 -   Get hyposmetry, area and volume for every 0.1 m layer
 -   Check days that have full depth profiles
--   Calculate specific heat in J/m3/K (equivalent to °C)
--   Calculate total joules heat storage by spHeat_J_m3K \* volume layer \* temperature above freezing point
+-   For deepest sampling depth, assume volume of this layer equals cumulative volume beneath it
+-   Use specific heat in J/kg/°C 
+-   Calculate total joules heat storage by spHeat \* density \* volume layer \* temperature above freezing point
     -   Also calculate J/m2 and J/m3
 -   Calculate latent heat of ice
     -   ice density of 900 kg/m3 \* 334000 J/kg

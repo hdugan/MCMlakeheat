@@ -25,6 +25,7 @@ getTotQ <- function(packagename, streamname) {
     mutate(timestep = as.numeric(date_time - lag(date_time))) |> 
     mutate(q_L = discharge.rate * timestep * 60) |> 
     mutate(q_m3 = q_L/1000) |> 
+    mutate(water_temp = if_else(!is.na(discharge.rate) & is.na(water_temp), 0, water_temp)) |> 
     filter(!is.na(water_temp) & water_temp >= -10) |> 
     mutate(spHeat_J_kgK = SW_SpcHeat(Temp = water_temp, S = 0, P = 1)) |>  
     mutate(spHeat_J_m3K = spHeat_J_kgK * 1000) |> 
@@ -32,11 +33,11 @@ getTotQ <- function(packagename, streamname) {
     summarise(avgQ_Ls = mean(discharge.rate, na.rm = T),
               totQ_L = sum(q_L, na.rm = T), 
               totHeat_J = sum(heat_J, na.rm = T), 
-              spHeat_J_kgK = mean(spHeat_J_kgK, na.rm = TRUE)) |>
+              spHeat_J_kgK = mean(spHeat_J_kgK, na.rm = TRUE),
+              water_temp = mean(water_temp, na.rm = T)) |>
     mutate(stream = streamname, yearStart = Year -1, yearEnd = Year) |> 
-    select(stream, yearStart, yearEnd, avgQ_Ls, totQ_L, totHeat_J, spHeat_J_kgK)
+    select(stream, yearStart, yearEnd, avgQ_Ls, totQ_L, totHeat_J, spHeat_J_kgK, water_temp)
   return(q.vg)
-  
 }
 
 stream.Q.list = list() 
@@ -63,23 +64,40 @@ heat.lake = heat.day |> filter(location_name == 'Lake Fryxell') |>
   mutate(month = month(date_time)) |> 
   mutate(yearEnd = if_else(month > 7, year(date_time) + 1, year(date_time))) |> 
   group_by(yearEnd) |> 
-  summarise(heat_lake = mean(heat_J, na.rm = TRUE))
+  summarise(heat_J_lake = mean(heat_J, na.rm = TRUE), vol_lake_m3 = mean(vol, na.rm = T), cumvol_lake_m3 = mean(cum_vol, na.rm = T), 
+            meantemp_lake = mean(tempV, na.rm = TRUE))
 
-b = stream.Q.df |> group_by(yearEnd) |> summarise(totHeat_J = sum(totHeat_J, na.rm = T)) |> 
+b = stream.Q.df |> group_by(yearEnd) |> 
+  summarise(heat_J_streams = sum(totHeat_J, na.rm = T), totQ_m3 = sum(totQ_L, na.rm = T)/1000, 
+            meantemp_stream = sum(water_temp*totQ_L)/sum(totQ_L)) |> 
   left_join(heat.lake) |> 
-  mutate(perHeat = 100*totHeat_J/heat_lake)
+  mutate(perHeat = 100*heat_J_streams/heat_J_lake, perVol = 100*totQ_m3/cumvol_lake_m3)
+write_csv(b, 'dataout/Fryxell_heat.csv')
+
+ggplot(b) +
+  geom_path(aes(x = yearEnd, y = meantemp_stream)) +
+  geom_path(aes(x = yearEnd, y = meantemp_lake), col = 'lightblue3') +
+  ylab('Mean Temp (°C)') + 
+  theme_bw(base_size = 9) +
+  theme(axis.title.x = element_blank())
 
 p3 = ggplot(b) +
   geom_line(aes(x = yearEnd, y = perHeat)) +
+  geom_line(aes(x = yearEnd, y = perVol), col = 'lightblue3') +
   ylab('% Stream Heat vs. Lake') + 
   theme_bw(base_size = 9) +
-  theme(axis.title.x = element_blank())
+  theme(axis.title.x = element_blank()); p3
 
 p1/p2/p3 + plot_layout(heights = c(2,2,1), guides = 'collect')
 ggsave(paste0('figures/SI_streamHeat.png'), width = 6.5, height = 6, dpi = 500)
 
+tail(b)
 
-# write_csv(stream.Q.df, 'mcm_totQ.csv')
+100*(1216481 * 3.28) / (59871203 * 1.88)
+1216481/59871203
+
+4156
+4202
 # 
 # ############################## AIR TEMPERATURE AND SOLAR RADIATION ############################## 
 # 
