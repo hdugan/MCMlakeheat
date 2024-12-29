@@ -65,7 +65,8 @@ download.file(inUrl1,infile1,method="curl")
 # )
 
 # Read in 2023 data (will be online soon)
-ctd2023 = read_csv('datain/ctd_2023.csv')
+ctd2023 = read_csv('datain/ctd_2023.csv') |> 
+  mutate(depth_m = wire_corrected_depth_m)
 
 ctd <- read_csv(infile1) |> 
   bind_rows(ctd2023) |> 
@@ -76,6 +77,7 @@ ctd <- read_csv(infile1) |>
                           location_name == 'East Lake Bonney' ~ 'Lake Bonney', 
                           location_name == 'West Lake Bonney' ~ 'Lake Bonney')) |> 
   filter(lake %in% c('Lake Bonney', 'Lake Fryxell','Lake Hoare')) |> 
+  mutate(depth_m = wire_corrected_depth_m) |> 
   left_join(ll.interp, by = join_by(location_name, date_time)) |>  # Join by masl 
   mutate(depth.asl = masl.approx - depth_m)
   

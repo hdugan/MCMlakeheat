@@ -8,7 +8,7 @@ hypo.use = hypo_new |>
   mutate(depth.asl.char = as.character(round(Elevation_masl,1))) |> 
   select(-lake, -Elevation_masl)
 
-# Check that days have full depths
+# Check that days have full depths (deletes 6 sampling dates)
 max.depths = df.spcH %>% 
   group_by(location_name, date_time) %>% 
   summarise(max.depth = last(depth_m)) %>% 
@@ -17,21 +17,25 @@ max.depths = df.spcH %>%
           (location_name == 'Lake Hoare' & max.depth > 15) |
           (location_name == 'West Lake Bonney' & max.depth > 30))
 
-# Join hyspometry
+# Join hyspometry. For bottom sampling depth, set this layer's volume equal to the cumulative volume beneath it. 
 hypo.join = df.full.ice |> 
   filter(date_time %in% max.depths$date_time) %>% 
   left_join(hypo.use, by = join_by(depth.asl.char, location_name)) %>% 
+  group_by(location_name, date_time) |>
+  mutate(vol_layer_m3 = if_else(depth.asl == min(depth.asl), cum_vol_m3, vol_layer_m3)) |> 
   mutate(temp_FPD = tempUse - FPD) %>% # set baseline temperature to -5°C
-  mutate(spHeat_J_m3K = spHeat_J_kgK * density_kg_m3) %>% 
   # latent heat of ice = density * thickness *  latent heat of ice (334000 J/kg)
   mutate(LHice_J_m3 = iceDensity_kgm3 * 334000) |> 
   mutate(heatIce_J = LHice_J_m3 * vol_layer_m3) |> 
-  mutate(heat_J = spHeat_J_m3K * vol_layer_m3 * temp_FPD) %>% 
+  mutate(heat_J = spHeat_J_kgK * density_kg_m3 * vol_layer_m3 * temp_FPD) %>% 
   mutate(heat_J_m2 = heat_J/Area_2D) |> 
   mutate(heat_J_m3 = heat_J/vol_layer_m3) |> 
   # mutate(heat_J_m2 = if_else(Area_2D == 0, 0, heat_J_m2)) |> 
   ungroup() |> 
-  mutate(volUse = if_else(depth.asl > ice.asl, NA, vol_layer_m3)) 
+  mutate(volUse = if_else(depth.asl > ice.asl, NA, vol_layer_m3))  |> 
+  mutate(cumvolUse = if_else(depth.asl > ice.asl, NA, cum_vol_m3)) |> 
+  mutate(icevolUse = if_else(depth.asl <= ice.asl, NA, vol_layer_m3)) 
+
 # caloric content (Kelvin) of ice or water (avg temp x thickness x sp heat)
 
 ##################### Plot heat maps #####################
@@ -97,7 +101,7 @@ hypo.join |> filter(location_name == "Lake Hoare") |>
   select(heat_J, heat_J_m2, tempUse) |> 
   summarise(mean(heat_J_m2), min(heat_J_m2), max(heat_J_m2), 
             mean(tempUse), min(tempUse), max(tempUse))
-# For Lake Hoare, Heat J/m2 between 50-55 m ~ 95880 J/m2
+# For Lake Hoare, Heat J/m2 between 50-55 m ~ 103634 J/m2
 # For Lake Hoare, temp °C between 50-55 m ~ 0.223 °C
 
 # Problem is not all casts go deep enough, specifically for Lake Hoare
@@ -112,9 +116,9 @@ fill.gaps.LH = expand.grid(location_name = 'Lake Hoare',
   left_join(hypo.join) |> 
   mutate(depth.asl = as.numeric(depth.asl.char)) |> 
   mutate(tempUse = if_else(is.na(tempUse) &
-                              depth.asl < 58, 0.223, tempUse)) |> 
+                              depth.asl < 58, 0.22659, tempUse)) |> 
   mutate(heat_J_m2 = if_else(is.na(heat_J_m2) &
-                               depth.asl < 58, 95880, heat_J_m2)) |> 
+                               depth.asl < 58, 103634, heat_J_m2)) |> 
   mutate(heat_J = if_else(is.na(heat_J) &
                             depth.asl < 58, heat_J_m2*Area_2D, heat_J)) 
 
@@ -132,11 +136,15 @@ hypo.fill = hypo.join |>
 # Summarise by day 
 heat.day = hypo.fill |> 
   mutate(tempV = tempUse * vol_layer_m3) |> 
-  summarise(ice.approx = mean(ice.approx, na.rm = T), heat_J = sum(heat_J, na.rm = T), heatIce_J = sum(heatIce_J, na.rm = T), 
-            Area_2D = first(Area_2D), vol = sum(volUse, na.rm = T), LL = first(masl.approx), 
+  summarise(ice.approx = mean(ice.approx, na.rm = T), ice.vol = sum(icevolUse, na.rm = T),
+            heat_J = sum(heat_J, na.rm = T), heatIce_J = sum(heatIce_J, na.rm = T), 
+            Area_2D = first(Area_2D), vol = sum(volUse, na.rm = T), cum_vol = max(cumvolUse,na.rm = T),
+            LL = first(masl.approx), 
             tempV = sum(tempV, na.rm = T)/vol, tempUse = mean(tempUse, na.rm = T),
   ) |> 
   mutate(heatTot_J_m2 = (heat_J - heatIce_J)/Area_2D) |> 
+  mutate(heatLake_J_m3 = (heat_J)/cum_vol) |> 
+  mutate(heatIce_J_m3 = heatIce_J/ice.vol) |> 
   ungroup() |> 
   mutate(location_name = factor(location_name, levels = c('Lake Fryxell','Lake Hoare', 'East Lake Bonney', 'West Lake Bonney'))) |> 
   mutate(dec.date = decimal_date(date_time), yday = yday(date_time)) |> 
@@ -144,10 +152,10 @@ heat.day = hypo.fill |>
   mutate(ice.approx = - ice.approx) # change ice to positive value
 
 heat.day_DecJan = heat.day |>
-  filter(yday(date_time) < 244 | yday(date_time) > 350) # past Dec 15th
+  filter(yday(date_time) < 244 | yday(date_time) > 365) # past Dec 15th
 
 heat.day = heat.day |> 
-  filter(yday(date_time) >= 244 & yday(date_time) <= 350) ##Between Sep 1 and Dec 15th for all lakes
+  filter(yday(date_time) >= 244 & yday(date_time) <= 365) ##Between Sep 1 and Dec 15th for all lakes
 
 # heat.day = heat.day |>
 #   filter(case_when(location_name == "Lake Hoare" ~ yday(date_time) >= 244 & yday(date_time) <= 350, #Between Sep 1 and Dec 15th for Lake Hoare
@@ -155,6 +163,45 @@ heat.day = heat.day |>
 #                    T ~ yday(date_time) >= 244 & yday(date_time) <= 335)) # Between Sep 1 and Dec 1 for other lakes
 
 # yday(as.Date('1997-12-01'))
+
+######### Plots timeseries of heat/m3 #########
+make.tsheat <- function(usename, j) {
+  ggplot(heat.day |> filter(location_name == usename)) +
+  geom_smooth(data = heat.day |> filter(location_name == usename) |> filter(year(date_time) <= 2020),
+              aes(x = date_time, y = heatLake_J_m3/1e6, color = location_name), method = 'gam', se = FALSE, 
+              formula = y ~ s(x, k = 25, bs = "tp", m = 1)) +
+  geom_point(data = heat.day |> filter(location_name == usename) |> filter(year(date_time) <= 2020),
+                aes(x = date_time, y = heatLake_J_m3/1e6, color = location_name), size = 0.5) +
+  geom_point(data = heat.day |> filter(location_name == usename) |> filter(year(date_time) > 2020),
+                aes(x = date_time, y = heatLake_J_m3/1e6, color = location_name), size = 0.5) +
+  geom_path(data = heat.day |> filter(location_name == usename) |> filter(year(date_time) > 2020),
+               aes(x = date_time, y = heatLake_J_m3/1e6, color = location_name), size = 1) +
+  scale_color_manual(values = usecolors[j], name = 'Lake') +
+  ylab('Heat (MJ m^-3 )') +
+  theme_bw(base_size = 9) +
+  theme(axis.title.x = element_blank(),
+        axis.title.y = element_markdown(),
+        legend.position = 'none')
+}
+h5 = make.tsheat(usename = 'Lake Fryxell', j = 1)
+h6 = make.tsheat(usename = 'Lake Hoare', j = 2)
+h7 = make.tsheat(usename = 'East Lake Bonney', j = 3)
+h8 = make.tsheat(usename = 'West Lake Bonney', j = 4)
+
+# Combine heat plots 
+layout <- "
+AC
+AC
+BD
+EG
+EG
+FH
+"
+
+h1 + h5 + h2 + h6 + h3 + h7 + h4 +  h8 +
+  plot_layout(design = layout) + plot_annotation(tag_levels = 'a', tag_suffix = ')') &
+  theme(plot.tag = element_text(size = 8))
+ggsave('figures/Fig3_HeatMap2.png', width = 6, height = 6, dpi = 500)
 
 ######### Plot timeseries ##########
 h.ice = ggplot(heat.day) +
@@ -193,13 +240,13 @@ h.wc = ggplot(heat.day) +
 
 h.ts = ggplot(heat.day) +
   geom_smooth(data = heat.day |> filter(year(date_time) <= 2020),
-              aes(x = date_time, y = heatTot_J_m2/1e6, color = location_name), method = 'gam', 
+              aes(x = date_time, y = (heat_J-heatIce_J)/Area_2D/1e6, color = location_name), method = 'gam', 
               formula = y ~ s(x, k = 25, bs = "tp", m = 1)) +
   geom_smooth(data = heat.day |> filter(year(date_time) > 2020),
-              aes(x = date_time, y = heatTot_J_m2/1e6, color = location_name), method = 'lm') +
+              aes(x = date_time, y = (heat_J-heatIce_J)/Area_2D/1e6, color = location_name), method = 'lm', se = FALSE) +
   geom_point(data = heat.day_DecJan, 
-             aes(x = date_time, y = heatTot_J_m2/1e6, fill = location_name), shape = 22, stroke = 0.2, alpha = 0.5) +
-  geom_point(aes(x = date_time, y = heatTot_J_m2/1e6, fill = location_name), shape = 21, stroke = 0.2, size = 1.2) +
+             aes(x = date_time, y = (heat_J-heatIce_J)/Area_2D/1e6, fill = location_name), shape = 22, stroke = 0.2, alpha = 0.5) +
+  geom_point(aes(x = date_time, y = (heat_J-heatIce_J)/Area_2D/1e6, fill = location_name), shape = 21, stroke = 0.2, size = 1.2) +
   scale_color_manual(values = usecolors, name = 'Lake') +
   scale_fill_manual(values = usecolors, name = 'Lake') +
   ylab('Heat storage (MJ m^-2 )') +
@@ -232,13 +279,7 @@ ggsave('figures/Fig4_HeatContent.png', width = 6, height = 4, dpi = 500)
 # Output heat data. 
 write_csv(heat.day, 'dataout/MDVLakes_dailyHeatStorage.csv')
 
-# results for paper 
-hypo.join |> group_by(location_name) |> 
-  summarise(minHeat3 = min(heat_J_m3/1e6, na.rm = T), maxHeat3 = max(heat_J_m3/1e6, na.rm = T))
-
-heat.day |> group_by(location_name) |> 
-  summarise(minHeat2 = min(heatTot_J_m2/1e6, na.rm = T), maxHeat2 = max(heatTot_J_m2/1e6, na.rm = T),
-            minIce = min(-heatIce_J/Area_2D/1e6, na.rm = T), maxIce = max(-heatIce_J/Area_2D/1e6, na.rm = T),
-            minWC = min(heat_J/Area_2D/1e6, na.rm = T), maxWC = max(heat_J/Area_2D/1e6, na.rm = T))
-
+ggplot(heat.day) +
+  geom_path(aes(x = date_time, y = tempUse)) +
+  facet_wrap(~location_name)
 

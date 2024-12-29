@@ -103,7 +103,7 @@ for (i in 1:4) {
   newYear2 = newYear |>
     filter(month(date_time) == 12) |> 
     mutate(across(-date_time, ~ ifelse(year(date_time) == 2020, NA, .))) |> 
-    mutate(fit.WL = fit.LL + fit.ice) |> 
+    mutate(fit.WL = fit.LL - fit.ice) |> 
     select(date_time, dec.date, fit.ice, fit.temp, fit.LL, fit.WL)
     
   output.predict[[i]] = newYear |> mutate(location_name = uselake)
@@ -164,7 +164,7 @@ plotCustom = list(  scale_colour_grey(end = 0.5),
                     scale_fill_manual(values = usecolors),
                     theme_bw(base_size = 9),
                     facet_wrap(~location_name, scales = 'free_y', nrow = 1),
-                    scale_x_continuous(breaks = c(2000,2010,2020)), 
+                    scale_x_continuous(limits = c(1993,2024), breaks = c(2000,2010,2020)), 
                     theme(axis.title.x = element_blank(),
                           legend.position = 'none',
                           legend.title = element_blank(),
@@ -209,9 +209,9 @@ p3 = ggplot(full.predict, aes(x = dec.date, y = fit.LL)) +
              mapping = aes(x = dec.date, y = LL, fill = location_name), 
              shape = 24, size = 1, stroke = 0.2) +
   geom_line(size = 0.3) +
-  geom_ribbon(aes(ymin = lower.LL + lower.ice, ymax = upper.LL + upper.ice, x = dec.date, fill = location_name), alpha = 0.5,
+  geom_ribbon(aes(ymin = lower.LL - lower.ice, ymax = upper.LL - upper.ice, x = dec.date, fill = location_name), alpha = 0.5,
               inherit.aes = FALSE) +
-  geom_line(aes(y = fit.LL + fit.ice)) +
+  geom_line(aes(y = fit.LL - fit.ice)) +
   labs(y = "Lake & Water Level (m)")  +
   plotCustom +
   theme(strip.background = element_blank(), strip.text.x = element_blank())
@@ -220,21 +220,21 @@ p3 = ggplot(full.predict, aes(x = dec.date, y = fit.LL)) +
 p5 = ggplot(full.interp) +
   geom_col(aes(x = dec.date, y = temp.diff, fill = location_name)) +
   ylab('Temp Diff (°C)') +
-  ylim(-0.32,0.36) +
+  ylim(-0.30,0.36) +
   plotCustom + 
   theme(strip.background = element_blank(), strip.text.x = element_blank())
 
 p6 = ggplot(full.interp) +
   geom_col(aes(x = dec.date, y = ice.diff, fill = location_name)) +
   ylab('Ice Diff (°C)') +
-  ylim(-0.72,1.5) +
+  ylim(-1.5,0.75) +
   plotCustom + 
   theme(strip.background = element_blank(), strip.text.x = element_blank())
 
 p7 = ggplot(full.interp) +
   geom_col(aes(x = dec.date, y = LL.diff, fill = location_name)) +
   ylab('LL Diff (°C)') +
-  ylim(-0.25,0.82) +
+  ylim(-0.25,0.83) +
   plotCustom + 
   theme(strip.background = element_blank(), strip.text.x = element_blank())
 
@@ -310,9 +310,10 @@ latexTable <- function(coefffit, usecols = 8) {
   # Create the LaTeX table
   latex_table <- xtable(coefffit,math.style.exponents = TRUE, digits = 3,
                         caption = paste0('Linear model fit 1'), 
-                          align = c("l", "l", "l", rep("r", usecols)))
+                        align = c("l", "l", "l", rep("r", usecols)))
   # Convert to LaTeX
   print(latex_table, 
+        hline.after = c(-1, 0, 1:nrow(coefffit)),
         include.rownames = FALSE, 
         sanitize.text.function = identity, 
         latex.environments = "center")
@@ -327,6 +328,7 @@ latexTable(coeffs_fit1 |> bind_rows(coeffs_fit2) |> bind_rows(coeffs_fit3) |> bi
 latexTable(coeffs_fit5.5 |> bind_rows(coeffs_fit5) |> bind_rows(coeffs_fit4) |>
              mutate(Lake = factor(Lake, levels = c('LF','LH','ELB','WLB'))) |> 
              arrange(Lake), usecols = 9)
+
 
 # Table for Manuscript 
 #### r values for model correlation using "pearson" method ####
@@ -362,3 +364,4 @@ latexTable(coeffs_fit5.5 |> filter(Lake == 'LF') |>
              arrange(Lake), usecols = 8)
 
 
+# round(cor(interp.out[[4]]$temp, interp.out[[4]]$iceZ, use = 'pairwise.complete.obs'),3)

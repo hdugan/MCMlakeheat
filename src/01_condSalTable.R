@@ -8,7 +8,7 @@ source('src/00_getIons.R')
 
 ############ Cond - Salinity transfer function ###############
 ggplot(salinity.df) + 
-  geom_point(aes(x = specCond, y = salinity)) +
+  geom_point(aes(x = specCond, y = salinity/1000)) +
   facet_wrap(~location_name, scales = 'free')
 
 df.2 = salinity.df |> select(location_name, depth.asl, depth_m:ctd_conductivity_mscm, specCond, salinity) |> 

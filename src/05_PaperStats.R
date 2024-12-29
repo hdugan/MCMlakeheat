@@ -91,7 +91,21 @@ for (i in 1:6) {
   # phase.sync, measures phase synchrony between quasiperiodic times series
   # The strength of phase synchrony can be quantified by a Q index that falls between 0 (no phase synchrony) 
   # and 1 (full phase synchrony) 
-  phase = phase.sync(ts1, ts2, mins = TRUE, nrands = 999)
+  # Function to safely handle phase sync in cases where it fails 
+  safe_phase.sync <- function(ts1, ts2) {
+    tryCatch({
+      phase.sync(ts1, ts2, mins = TRUE, nrands = 999)
+    }, error = function(e) {
+      if (grepl("need at least two non-NA values to interpolate", e$message)) {
+        # return(NA) # Return NA for specific error
+        return(data.frame(Q.obs = NA, pval = NA))
+      } else {
+        stop(e) # Rethrow other errors
+      }
+    })
+  }
+  phase = safe_phase.sync(ts1,ts2)
+  # phase = phase.sync(ts1, ts2, mins = TRUE, nrands = 999)
   sync1.out$Phase[i] = phase$Q.obs
   sync1.out$Phase.p[i] = phase$pval
 }
@@ -217,11 +231,38 @@ for (i in 1:4) {
 }
 
 ###################### Table 1 ############################
+# Check ranges for manuscript 
 ctd.join |> 
   group_by(location_name) |> 
   mutate(location_name = factor(location_name, levels = c('Lake Fryxell','Lake Hoare', 'East Lake Bonney', 'West Lake Bonney'))) |> 
   summarise(minT = min(ctd_temp_c, na.rm = T), maxT = max(ctd_temp_c, na.rm = T),
             minC = min(ctd_conductivity_mscm, na.rm = T), maxC = max(ctd_conductivity_mscm, na.rm = T))
+
+# salinity (g/kg) - except using g/ml in manuscipt 
+df.sal |>   
+  group_by(location_name) |> 
+  mutate(location_name = factor(location_name, levels = c('Lake Fryxell','Lake Hoare', 'East Lake Bonney', 'West Lake Bonney'))) |> 
+  summarise(minS = min(salinity_g_kg, na.rm = T), maxS = max(salinity_g_kg, na.rm = T))
+
+# spHeat
+df.spcH |> group_by(location_name) |> 
+  mutate(location_name = factor(location_name, levels = c('Lake Fryxell','Lake Hoare', 'East Lake Bonney', 'West Lake Bonney'))) |> 
+  summarise(min(spHeat_J_kgK, na.rm = T), max(spHeat_J_kgK, na.rm = T))
+
+# Density
+df.sal |> group_by(location_name) |> summarise(min(density_kg_m3, na.rm = T), max(density_kg_m3, na.rm = T))
+
+# Heat J/m3
+hypo.join |> group_by(location_name) |> 
+  mutate(location_name = factor(location_name, levels = c('Lake Fryxell','Lake Hoare', 'East Lake Bonney', 'West Lake Bonney'))) |> 
+  summarise(minHeat3 = min(heat_J_m3/1e6, na.rm = T), maxHeat3 = max(heat_J_m3/1e6, na.rm = T))
+
+heat.day |> group_by(location_name) |> 
+  mutate(location_name = factor(location_name, levels = c('Lake Fryxell','Lake Hoare', 'East Lake Bonney', 'West Lake Bonney'))) |> 
+  summarise( maxHeat2 = max(heatTot_J_m2/1e6, na.rm = T), minHeat2 = min(heatTot_J_m2/1e6, na.rm = T),
+             minIce = min(-heatIce_J/Area_2D/1e6, na.rm = T), maxIce = max(-heatIce_J/Area_2D/1e6, na.rm = T),
+             minWC = min(heat_J/Area_2D/1e6, na.rm = T), maxWC = max(heat_J/Area_2D/1e6, na.rm = T))
+
 
 ###################### FLOOD YEAR LAKE LEVEL RISE ############################
 ll |> filter(year(date_time) %in% c(2001,2002)) |> 
