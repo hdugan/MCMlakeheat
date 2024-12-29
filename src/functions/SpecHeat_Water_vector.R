@@ -70,61 +70,16 @@
 #       390, 1-24, 2016. (http://web.mit.edu/seawater/) 
 #=========================================================================
 
-SW_SpcHeat <- function(Temp, uT = 'C', S, uS = 'ppt', P, uP = 'bar') {
-  
-  if (anyNA(c(Temp, S, P))) {
-    return(NA)
-  }
-  
+
+SW_SpcHeat_vector <- function(Temp, S, P) {
+
   # Constants
   P0 <- 0.101325  # Reference pressure in MPa
-  
-  # Check that S, T & P have the same dimensions
-  if (!identical(dim(S), dim(Temp)) || !identical(dim(Temp), dim(P))) {
-    stop("S, Temp & P must have same dimensions")
-  }
-  
-  # Convert temperature input to °C
-  switch(tolower(uT),
-         "c" = {},  # Already in °C
-         "k" = { Temp <- Temp - 273.15 },
-         "f" = { Temp <- 5/9 * (Temp - 32) },
-         "r" = { Temp <- 5/9 * (Temp - 491.67) },
-         stop("Not a recognized temperature unit. Please use 'C', 'K', 'F', or 'R'")
-  )
-  
-  # Convert salinity to ppt
-  switch(tolower(uS),
-         "ppt" = {},  # Already in ppt
-         "ppm" = { S <- S / 1000 },
-         "w" = { S <- S * 1000 },
-         "%" = { S <- S * 10 },
-         stop("Not a recognized salinity unit. Please use 'ppt', 'ppm', 'w', or '%'")
-  )
-  
+
   # Convert pressure input to MPa
-  switch(tolower(uP),
-         "mpa" = {},  # Already in MPa
-         "bar" = { P <- P / 10 },
-         "kpa" = { P <- P / 1000 },
-         "pa" = { P <- P / 1E6 },
-         stop("Not a recognized pressure unit. Please use 'MPa', 'bar', 'kPa', or 'Pa'")
-  )
+  P <- P / 10 # from bar to Mpa
   
-  # Check that S, Temp & P are within the function range
-  if (any(Temp < 0 | Temp > 180)) {
-    warning("Temperature is out of range for specific heat function 0<T<180 C")
-  }
-  
-  if (any(S < 0 | S > 180)) {
-    warning("Salinity is out of range for specific heat function 0<S<180 g/kg")
-  }
-  
-  Psat <- SW_Psat(Temp, 'C', S, 'ppt') / 1E6
-  
-  if (any(P < Psat | Psat > 12)) {
-    warning("Pressure is out of range for specific heat function P_sat < P < 12 MPa")
-  }
+  Psat <- SW_Psat_vector(Temp, S) / 1E6
   
   # Begin calculation
   
@@ -164,7 +119,7 @@ SW_SpcHeat <- function(Temp, uT = 'C', S, uS = 'ppt', P, uP = 'bar') {
 # USAGE:  Pv = SW_Psat(T,uT,S,uS)
 #
 # DESCRIPTION:
-  #   Vapor pressure of natural seawater given by [1] based on new correlation
+#   Vapor pressure of natural seawater given by [1] based on new correlation
 #   The pure water vapor pressure is given by [2]
 #
 # INPUT:
@@ -215,39 +170,10 @@ SW_SpcHeat <- function(Temp, uT = 'C', S, uS = 'ppt', P, uP = 'bar') {
 #       and Water Treatment, 16, 354-380, 2010. (http://web.mit.edu/seawater/)
 
 # Function to calculate saturation vapor pressure of seawater
-SW_Psat <- function(Temp, uT, S, uS) {
-  
-  # Convert temperature to Celsius if necessary
-  if (uT == "K") {
-    T_C <- Temp - 273.15
-  } else if (uT == "F") {
-    T_C <- (Temp - 32) * 5/9
-  } else if (uT == "R") {
-    T_C <- (Temp - 491.67) * 5/9
-  } else {
-    T_C <- Temp  # Assume Celsius if not specified or already in Celsius
-  }
-  
-  # Convert salinity to g/kg if necessary
-  if (uS == "ppt") {
-    S_gkg <- S
-  } else if (uS == "ppm") {
-    S_gkg <- S / 1000
-  } else if (uS == "w" || uS == "%") {
-    S_gkg <- S * 1000
-  } else {
-    stop("Unknown salinity unit. Valid units: ppt, ppm, w, %")
-  }
-  
-  # Check that S, Temp & P are within the function range
-  if (any(Temp < 0 | Temp > 180)) {
-    warning("Temperature is out of range for specific heat function 0<T<180 C")
-  }
-  
-  if (any(S < 0 | S > 160)) {
-    warning("Salinity is out of range for specific heat function 0<S<160 g/kg")
-  }
-  
+# temperature in °C
+# S in g/kg 
+SW_Psat_vector <- function(Temp, S) {
+
   # Given temperature T in Celsius
   Temp <- Temp + 273.15  # Convert temperature to Kelvin
   
