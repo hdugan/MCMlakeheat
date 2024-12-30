@@ -163,6 +163,7 @@ alpha.ELB = 15.299; beta.ELB = 133.36
 
 df.sal = df.clean |> 
   mutate(ctd_conductivity_mscm = if_else(ctd_conductivity_mscm <= 0 , 0, ctd_conductivity_mscm)) |> # cannot be negative
+  mutate(specCond_5 = ctd_conductivity_mscm/(1 + 0.020*(ctd_temp_c - 5))) |> # standardize to 5°C
   mutate(salinity.UNESCO = ec2pss(ctd_conductivity_mscm, t = ctd_temp_c, p = 1 + depth_m)) |> 
   mutate(salinity.UNESCO = if_else(salinity.UNESCO <= 0 , 0, salinity.UNESCO)) |> # cannot be negative
   rowwise() |> 
@@ -200,7 +201,16 @@ ggplot(df.sal) +
   scale_colour_viridis_c(option = 'F', name = 'Year') +
   theme_bw(base_size = 9) +
   facet_wrap(~location_name, scales = 'free')
-  
+
+# Check plot 
+ggplot(df.sal) +
+  geom_path(aes(x = specCond_5, y = depth.asl, group = date_time, color = year(date_time))) +
+  geom_path(aes(x = ctd_conductivity_mscm, y = depth.asl, group = date_time, color = year(date_time))) +
+  ylab('Elevation (m asl)') + xlab('Density (kg/m3)') +
+  scale_colour_viridis_c(option = 'F', name = 'Year') +
+  theme_bw(base_size = 9) +
+  facet_wrap(~location_name, scales = 'free')
+
 # ####### Old cold
 # df.spc = df.clean |> 
 #   mutate(specCond.raw = ctd_conductivity_mscm/(1 + 0.020*(ctd_temp_c - 5))) |> # standardize to 5°C

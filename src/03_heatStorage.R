@@ -152,10 +152,10 @@ heat.day = hypo.fill |>
   mutate(ice.approx = - ice.approx) # change ice to positive value
 
 heat.day_DecJan = heat.day |>
-  filter(yday(date_time) < 244 | yday(date_time) > 365) # past Dec 15th
+  filter(yday(date_time) < 244 | yday(date_time) > 365) # past Dec 31st
 
 heat.day = heat.day |> 
-  filter(yday(date_time) >= 244 & yday(date_time) <= 365) ##Between Sep 1 and Dec 15th for all lakes
+  filter(yday(date_time) >= 244 & yday(date_time) <= 365) ##Between Sep 1 and Dec Dec 31st for all lakes
 
 # heat.day = heat.day |>
 #   filter(case_when(location_name == "Lake Hoare" ~ yday(date_time) >= 244 & yday(date_time) <= 350, #Between Sep 1 and Dec 15th for Lake Hoare
