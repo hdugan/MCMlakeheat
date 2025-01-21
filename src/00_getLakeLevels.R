@@ -2,6 +2,7 @@
 library(tidyverse)
 library(lubridate)
 library(zoo)
+library(ggtext)
 
 source('src/00_gethypso.R')
 

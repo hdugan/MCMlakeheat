@@ -312,8 +312,24 @@ ggplot(df.zoom) +
   geom_point(aes(x = value, y = depth_m, col = name)) +
   scale_color_manual(values = c('red4','gold','lightblue3','red3')) +
   scale_y_reverse() +
-  xlab('Density (kg/m3)') + ylab('Depth (m)') +
+  xlab('Density (kg m<sup>-3</sup>)') + ylab('Depth (m)') +
   facet_wrap(~location_name, scales = 'free')  +
-  theme_bw(base_size = 9)
+  theme_bw(base_size = 9) +
+  theme(axis.title.x = element_markdown())
 
 ggsave('figures/SI_DensityComp.png', width = 6, height = 2.5, dpi = 500, units = 'in')
+
+# density anomaly from pure water at the same temperature and pressure
+salinity.df2 |> 
+  filter(location_name %in% c('East Lake Bonney')) |> 
+  filter(salinity.mg_l > 100) |> 
+  select(location_name, depth_m, density.SP96, density.Tadj) |> 
+  filter(!is.na(density.Tadj)) |> 
+  mutate(diff = 100*abs(density.Tadj - density.SP96)/ (density.Tadj - 1000))
+
+salinity.df2 |> 
+  filter(location_name %in% c('West Lake Bonney')) |> 
+  filter(salinity.mg_l > 100) |> 
+  select(location_name, depth_m, density.UNESCO, density.Tadj) |> 
+  filter(!is.na(density.Tadj)) |> 
+  mutate(diff = 100*abs(density.Tadj - density.UNESCO)/ (density.Tadj - 1000))

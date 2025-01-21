@@ -271,4 +271,22 @@ ll |> filter(year(date_time) %in% c(2001,2002)) |>
   summarise(minLL = min(masl), maxLL = max(masl)) |> 
   mutate(diff = maxLL - minLL)
 
+###################### % water level ############################ 
+# calculate a more robust total heat content of the lake in order to
+# compare heat storage through time. For all lakes, we instituted a bottom
+# elevation cutoff so profiles ended at the same depth [Lake Fryxell = 2.5 masl,
+# Lake Hoare = 48 masl, ELB and WLB = 25 masl].
+cutoff = data.frame(lake = c('LF','LH','ELB','WLB'),
+           cutoff = c(2.5, 48, 25, 25))
+
+max.ll = ll |> group_by(location_name) |> summarise(masl = max(masl))
+
+hypo_new |> left_join(max.ll) |> 
+  filter(Elevation_masl < masl) |> 
+  left_join(cutoff) |> 
+  group_by(location_name) |> 
+  mutate(perVol = 100*cum_vol_m3/max(cum_vol_m3)) |> 
+  filter(Elevation_masl < cutoff) |> 
+  summarise(max(perVol))
+  
 

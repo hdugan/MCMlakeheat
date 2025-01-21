@@ -48,7 +48,7 @@ makeHeat <- function(name, filllimits = c(NA,NA)) {
               aes(x = date_time, y = depth.asl), fill = 'grey80', width = 150, height = 0.1) +
     scale_fill_scico(palette = 'vik', direction = 1, name = 'MJ m^-3', limits = filllimits, na.value = 'black') +
     labs(subtitle = name) +
-    ylab('Depth asl (m)') +
+    ylab('Elevation (m asl)') +
     theme_bw(base_size = 9) +
     theme(axis.title.x = element_blank(),
           legend.text = element_text(size = 7),
@@ -177,7 +177,7 @@ make.tsheat <- function(usename, j) {
   geom_path(data = heat.day |> filter(location_name == usename) |> filter(year(date_time) > 2020),
                aes(x = date_time, y = heatLake_J_m3/1e6, color = location_name), size = 1) +
   scale_color_manual(values = usecolors[j], name = 'Lake') +
-  ylab('Heat (MJ m^-3 )') +
+  ylab('Heat (MJ m^<sup>-3</sup>)') +
   theme_bw(base_size = 9) +
   theme(axis.title.x = element_blank(),
         axis.title.y = element_markdown(),
@@ -249,7 +249,7 @@ h.ts = ggplot(heat.day) +
   geom_point(aes(x = date_time, y = (heat_J-heatIce_J)/Area_2D/1e6, fill = location_name), shape = 21, stroke = 0.2, size = 1.2) +
   scale_color_manual(values = usecolors, name = 'Lake') +
   scale_fill_manual(values = usecolors, name = 'Lake') +
-  ylab('Heat storage (MJ m^-2 )') +
+  ylab('Heat storage (MJ m^<sup>-2</sup>)') +
   theme_bw(base_size = 9) +
   theme(axis.title.x = element_blank(),
         axis.title.y = element_markdown(),
@@ -282,4 +282,17 @@ write_csv(heat.day, 'dataout/MDVLakes_dailyHeatStorage.csv')
 ggplot(heat.day) +
   geom_path(aes(x = date_time, y = tempUse)) +
   facet_wrap(~location_name)
+
+# Output SI figure comparing 1-D temp to area-weighted temp
+
+ggplot(heat.day, aes(x = dec.date, y = tempV, fill = location_name)) +
+  geom_point(size = 0.4, col = 'grey50') +
+  geom_smooth(col = 'grey50', size = 0.3, fill = 'grey80') +
+  geom_point(aes(x = dec.date, y = tempUse, col = location_name), size = 0.4) +
+  geom_smooth(aes(x = dec.date, y = tempUse, col = location_name), size = 0.4) +
+  scale_color_manual(values = usecolors) +
+  labs(y = "Mean Temp (°C)") +
+  plotCustom
+
+ggsave(paste0('figures/SI_tempComp.png'), width = 6.5, height = 2.5, dpi = 500)
 
