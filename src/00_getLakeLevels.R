@@ -68,7 +68,9 @@ ll.interp = expand_grid(date_time = seq.Date(as.Date('1991-01-26'), as.Date('202
 # Priscu, J. 2023. Lake ice thickness and density measurements, McMurdo Dry Valleys, Antarctica (1989-2023, ongoing) ver 14. 
 # Environmental Data Initiative. https://doi.org/10.6073/pasta/515c54434ee203a7611ed7db1e2501ae (Accessed 2024-07-02).
 # Package ID: knb-lter-mcm.67.14 Cataloging System:https://pasta.edirepository.org.
-inUrl1  <- "https://pasta.lternet.edu/package/data/eml/knb-lter-mcm/67/14/204ecca57a10a759532ba520376433ab" 
+# inUrl1  <- "https://pasta.lternet.edu/package/data/eml/knb-lter-mcm/67/14/204ecca57a10a759532ba520376433ab" 
+inUrl1  <- "https://pasta.lternet.edu/package/data/eml/knb-lter-mcm/67/17/204ecca57a10a759532ba520376433ab" 
+
 infile1 <- tempfile()
 download.file(inUrl1,infile1,method="curl")
 
@@ -83,16 +85,11 @@ download.file(inUrl1,infile1,method="curl")
 #   }
 # )
 
-# Get 2023 ice thickness (will be online soon)
-ice2023 = read_csv('datain/ice_2023.csv')
-
 ice <- read_csv(infile1) |> 
-  bind_rows(ice2023) |> 
   mutate(date_time = as.Date(mdy_hm(date_time))) |> 
   filter(year(date_time) > 1992) |> 
-  filter(lake %in% c('East Lake Bonney', 'West Lake Bonney', 'Lake Fryxell','Lake Hoare')) |> 
-  mutate(location_name = lake) |> 
-  select(-lake, -dataset_code, -filename, -density, -tool, -z_diff_m, -comments, -lat, -lon) |>
+  filter(location_name %in% c('East Lake Bonney', 'West Lake Bonney', 'Lake Fryxell','Lake Hoare')) |> 
+  select(-location, -dataset_code, -filename, -density, -tool, -z_diff_m, -comments, -lat, -lon) |>
   filter(!(location_name == 'West Lake Bonney' & z_water_m > -2.5)) |> # remove outlier
   filter(!(location_name == 'Lake Fryxell' & date_time == as.Date('2022-11-28'))) |>  # remove outlier
   group_by(location_name, date_time) |> 
