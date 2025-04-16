@@ -133,6 +133,37 @@ hypo.fill = hypo.join |>
                                  location_name == 'Lake Hoare' ~ 58)) |> 
   filter(depth.asl >= cutoffDepth) 
 
+# Calculate heat flux between profiles
+firstprofile = hypo.fill |> select(location_name, date_time, year, depth.asl, ctd_temp_c, salinity_g_kg, spHeat_J_kgK, density_kg_m3, Area_2D) |> 
+  filter(yday(date_time) >= 244 & yday(date_time) <= 365) |> # Between Sep 1 and Dec 31 for all lakes 
+  group_by(location_name, year) |> 
+  mutate(firstdate = first(date_time)) |> 
+  filter(date_time == firstdate) |> 
+  mutate(Q_layer = density_kg_m3 * spHeat_J_kgK * ctd_temp_c * Area_2D * 0.1) # 0.1 is dz layer depth, in meters 
+
+# Sum total heat content per profile and then calculate heat flux between profiles
+heat_flux <- firstprofile %>%
+  group_by(location_name, date_time) %>%
+  summarise(
+    Q_total = sum(Q_layer, na.rm = TRUE),
+    .groups = "drop"
+  ) %>%
+  arrange(location_name, date_time) |> 
+  group_by(location_name) %>%
+  mutate(
+    delta_Q = Q_total - lag(Q_total),
+    delta_t = as.numeric(difftime(date_time, lag(date_time), units = "secs")),
+    flux_W = delta_Q / delta_t,
+    flux_W_m2 = flux_W / mean(ctd$Area_2D, na.rm = TRUE)  # or use surface area
+  )
+
+ggplot(heat_flux, aes(x = date_time, y = flux_W_m2, color = location_name)) +
+  geom_line(linewidth = 1) +
+  geom_hline(yintercept = 0, linetype = "dashed", color = "gray50") +
+  scale_color_manual(values = usecolors, name = 'Lake') +
+  ylab("∆ Heat Flux (W/m²)") +
+  theme_bw(base_size = 9)
+
 # Summarise by day 
 heat.day = hypo.fill |> 
   mutate(tempV = tempUse * vol_layer_m3) |> 
@@ -198,7 +229,7 @@ EG
 FH
 "
 
-h1 + h5 + h2 + h6 + h3 + h7 + h4 +  h8 +
+h1 + h5 + h2 + h6 + h3 + h7 + h4 + h8 +
   plot_layout(design = layout) + plot_annotation(tag_levels = 'a', tag_suffix = ')') &
   theme(plot.tag = element_text(size = 8))
 ggsave('figures/Fig3_HeatMap2.png', width = 6, height = 6, dpi = 500)
