@@ -413,17 +413,31 @@ c1 / c2 + plot_layout(guides = 'collect') +
 ggsave('figures/Fig2_CTDchange.png', width = 6, height = 6, dpi = 500)
 
 ####  Sampling Days Plot ####
-df.full.ice |> 
+samplingdays = df.full.ice |> 
   group_by(location_name, date_time) |> 
   summarise() |> 
   mutate(fakeyear = `year<-`(date_time, 2024)) |> 
+  mutate(fakeyear2 = if_else(month(fakeyear) >= 10, `year<-`(fakeyear, 2023), fakeyear)) |> 
   mutate(location_name = factor(location_name, levels = c('Lake Fryxell','Lake Hoare', 'East Lake Bonney', 'West Lake Bonney'))) |> 
-  ggplot() +
-  geom_tile(aes(x = fakeyear, y = year(date_time)), linewidth  = 200) +
+  mutate(wateryear = if_else(month(date_time) >= 10, year(date_time) + 1, year(date_time)))
+
+# Highlight profiles used for averging 
+source('src/functions/profileAvgDates.R')
+# this returns chosen dates for each lake
+bestdates
+# 1 East Lake Bonney   338     114 1995-12-04 
+# 2 Lake Fryxell       329     170 1995-11-25 
+# 3 Lake Hoare         345     246 1995-12-11 
+# 4 West Lake Bonney   327     107 1995-11-23 
+
+ggplot(samplingdays) +
+  geom_point(data = chosendates, aes(x = fakeyear2, y = wateryear), color = 'red') +
+  geom_tile(aes(x = fakeyear2, y = wateryear), linewidth  = 200) +
   theme_bw(base_size = 9) +
-  scale_y_continuous(breaks = seq(1993,2024, by = 2), name = 'Year') +
-  scale_x_date(date_labels = '%b', date_breaks = '2 months', name = 'Day') +
-  facet_wrap(~location_name) 
+  scale_y_continuous(breaks = seq(1993,2024, by = 2), name = 'Water Year') +
+  scale_x_date(date_labels = '%b', date_breaks = '1 months', name = 'Day') +
+  facet_wrap(~location_name) +
+  theme(axis.title.x = element_blank())
 
 ggsave('figures/SI_SamplingDays.png', width = 6, height = 4, dpi = 500)
 
