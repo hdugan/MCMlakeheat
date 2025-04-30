@@ -90,7 +90,7 @@ for (lakename in c('Lake Fryxell','Lake Hoare', 'East Lake Bonney', 'West Lake B
         )
       ) %>%
       ungroup() %>%
-      select(location_name, wateryear, chosen_date) |>
+      # select(location_name, wateryear, chosen_date) |>
       mutate(fakeyear = `year<-`(chosen_date, 2024)) |> 
       mutate(fakeyear2 = if_else(month(fakeyear) >= 10, `year<-`(fakeyear, 2023), fakeyear))
     

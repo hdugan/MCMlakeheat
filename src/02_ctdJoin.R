@@ -430,11 +430,17 @@ bestdates
 # 3 Lake Hoare         345     246 1995-12-11 
 # 4 West Lake Bonney   327     107 1995-11-23 
 
+# Removedate where it's really challenging to get a consistency year to year
+chosendates2 = chosendates |> 
+  filter(!(location_name == 'Lake Hoare' & wateryear <= 2004)) |> 
+  filter(!(location_name == 'Lake Fryxell' & wateryear <= 1995))  
+
 ggplot(samplingdays) +
   geom_point(data = chosendates, aes(x = fakeyear2, y = wateryear), color = 'red') +
+  geom_point(data = chosendates2, aes(x = fakeyear2, y = wateryear), color = 'gold') +
   geom_tile(aes(x = fakeyear2, y = wateryear), linewidth  = 200) +
   theme_bw(base_size = 9) +
-  scale_y_continuous(breaks = seq(1993,2024, by = 2), name = 'Water Year') +
+  scale_y_continuous(breaks = seq(1993,2025, by = 2), name = 'Water Year') +
   scale_x_date(date_labels = '%b', date_breaks = '1 months', name = 'Day') +
   facet_wrap(~location_name) +
   theme(axis.title.x = element_blank())

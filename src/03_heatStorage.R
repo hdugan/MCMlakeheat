@@ -133,32 +133,54 @@ hypo.fill = hypo.join |>
                                  location_name == 'Lake Hoare' ~ 58)) |> 
   filter(depth.asl >= cutoffDepth) 
 
-# Calculate heat flux between profiles
-firstprofile = hypo.fill |> select(location_name, date_time, year, depth.asl, ctd_temp_c, salinity_g_kg, spHeat_J_kgK, density_kg_m3, Area_2D) |> 
-  filter(yday(date_time) >= 244 & yday(date_time) <= 365) |> # Between Sep 1 and Dec 31 for all lakes 
-  group_by(location_name, year) |> 
-  mutate(firstdate = first(date_time)) |> 
-  filter(date_time == firstdate) |> 
-  mutate(Q_layer = density_kg_m3 * spHeat_J_kgK * ctd_temp_c * Area_2D * 0.1) # 0.1 is dz layer depth, in meters 
+# Calculate heat flux between profiles. Use chosen dates to keep profiles of interest (see samplingdays.png)
+usedates = chosendates2 |> 
+  mutate(date1 = if_else(closest == 'second', NA, date1)) |> 
+  mutate(date2 = if_else(closest == 'first', NA, date2)) |> 
+  select(location_name, wateryear, date1, date2) |> 
+  pivot_longer(cols = 3:4, values_to = 'date_time') |> 
+  filter(!is.na(date_time))
+
+firstprofile = hypo.fill |> 
+  mutate(tempV = tempUse * vol_layer_m3) |> 
+  select(location_name, date_time, year, depth.asl.char, depth.asl, tempUse, tempV, salinity_g_kg, spHeat_J_kgK, density_kg_m3, 
+         ice.approx, masl.approx, volUse, Area_2D) |> 
+  inner_join(usedates |> select(-name), by = join_by(location_name, date_time)) |> # select only chosen dates
+  group_by(location_name, wateryear, depth.asl.char) |> 
+  summarise_all(mean, na.rm = T) |> 
+  mutate(Q_layer = density_kg_m3 * spHeat_J_kgK * tempUse * Area_2D * 0.1) |>  # 0.1 is dz layer depth, in meters 
+  left_join(chosendates2 |> select(location_name, wateryear, chosen_date)) |> 
+  arrange(location_name, wateryear, depth.asl)
+
+# Test plot to see if profile averages looks good           
+ggplot(firstprofile) +
+  geom_path(aes(x = tempUse, y = as.numeric(depth.asl.char), group = wateryear)) +
+  facet_wrap(~location_name, scales = 'free')
 
 # Sum total heat content per profile and then calculate heat flux between profiles
 heat_flux <- firstprofile %>%
-  group_by(location_name, date_time) %>%
+  group_by(location_name, wateryear, chosen_date) %>%
   summarise(
     Q_total = sum(Q_layer, na.rm = TRUE),
+    vol = sum(volUse, na.rm = T), 
+    tempV = sum(tempV, na.rm = T)/vol, tempUse = mean(tempUse, na.rm = T),
+    LL = first(masl.approx),
+    ice.approx = mean(ice.approx, na.rm = T),
     .groups = "drop"
   ) %>%
-  arrange(location_name, date_time) |> 
+  arrange(location_name, wateryear, chosen_date) |> 
   group_by(location_name) %>%
   mutate(
     delta_Q = Q_total - lag(Q_total),
-    delta_t = as.numeric(difftime(date_time, lag(date_time), units = "secs")),
+    delta_t = as.numeric(difftime(chosen_date, lag(chosen_date), units = "secs")),
     flux_W = delta_Q / delta_t,
     flux_W_m2 = flux_W / mean(ctd$Area_2D, na.rm = TRUE)  # or use surface area
-  )
+  ) |> 
+  mutate(location_name = factor(location_name, levels = c('Lake Fryxell','Lake Hoare', 'East Lake Bonney', 'West Lake Bonney')))
 
-ggplot(heat_flux, aes(x = date_time, y = flux_W_m2, color = location_name)) +
+ggplot(heat_flux, aes(x = chosen_date, y = flux_W_m2, color = location_name)) +
   geom_line(linewidth = 1) +
+  geom_point() +
   geom_hline(yintercept = 0, linetype = "dashed", color = "gray50") +
   scale_color_manual(values = usecolors, name = 'Lake') +
   ylab("∆ Heat Flux (W/m²)") +
