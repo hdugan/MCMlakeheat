@@ -9,12 +9,14 @@ library(wql)
 library(ggtext)
 library(gridtext)
 library(scico)
+library(cowplot)
 
 
 source('src/00_getCTD.R')
 source('src/00_gethypso.R')
 source('src/functions/SpecHeat_Water_vector.R')
 source('src/functions/salinity_fromDensity.R')
+source('src/functions/plotCustom.R')
 
 # Round depth to 0.1 m increment
 ctd.join = ctd |> 
@@ -356,10 +358,10 @@ ct2 = ggplot(df.full.ice) +
 ct1 / ct2 + plot_layout(guides = 'collect') +
   plot_annotation(tag_levels = 'a', tag_suffix = ')') &
   theme(plot.tag = element_text(size = 8), legend.position = 'bottom', 
-        legend.key.width = unit(0.5, 'cm'), legend.key.height = unit(0.3, 'cm'),
+        legend.key.width = unit(1, 'cm'), legend.key.height = unit(0.3, 'cm'),
         legend.title = element_blank(),
         legend.margin = margin(0, 0, 0, 0))
-ggsave('figures/Fig1_CTD.png', width = 6, height = 6, dpi = 500)
+ggsave('figures/Fig1_CTD.png', width = 6, height = 5, dpi = 500)
 
 
 # Figure 2: Same plot but of CTD changes 
@@ -406,11 +408,11 @@ diffprofile |> group_by(location_name) |> summarise(first(initialDate))
 c1 / c2 + plot_layout(guides = 'collect') +
   plot_annotation(tag_levels = 'a', tag_suffix = ')') &
   theme(plot.tag = element_text(size = 8), legend.position = 'bottom', 
-        legend.key.width = unit(0.5, 'cm'), legend.key.height = unit(0.3, 'cm'),
+        legend.key.width = unit(1, 'cm'), legend.key.height = unit(0.3, 'cm'),
         legend.title = element_blank(),
         legend.margin = margin(0, 0, 0, 0))
 
-ggsave('figures/Fig2_CTDchange.png', width = 6, height = 6, dpi = 500)
+ggsave('figures/Fig2_CTDchange.png', width = 6, height = 5, dpi = 500)
 
 ####  Sampling Days Plot ####
 samplingdays = df.full.ice |> 

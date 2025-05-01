@@ -19,7 +19,8 @@ lakecolor = data.frame(uselake = c('Lake Fryxell','Lake Hoare', 'East Lake Bonne
            k = c(30,30,30,30))
 
 output.plots = list(); output.fit1 = list(); output.fit2 = list(); output.fit3 = list(); output.fit3.5 = list()
-output.fit4 = list(); output.fit5 = list(); output.fit5.5 = list(); output.fit6 = list()
+output.fit4 = list(); output.fit5 = list(); output.fit5.5 = list(); output.fit6 = list(); output.fit7 = list()
+output.fit8 = list(); output.fit9 = list()
 output.predict = list(); output.predict.dec = list(); interp.out = list()
 
 # Big old loop ####
@@ -43,8 +44,6 @@ for (i in 1:4) {
   ## Fit gam to mean temp data 
   mod.temp <- gam(tempUse ~ s(dec.date, k = usek, bs = 'tp', m = 2), 
                  data = heat.day |> filter(location_name == uselake))
-  # mod.vol <- gam(vol ~ s(dec.date, k = usek, bs = 'tp'),
-  #                 data = heat.day |> filter(location_name == uselake))
   
   # Fit GAM to ice
   ice.dec = ice |> mutate(dec.date = decimal_date(date_time)) |> 
@@ -118,6 +117,11 @@ for (i in 1:4) {
     summarise(temp = mean(tempUse, na.rm = TRUE))
     ) |> 
     left_join(
+      heat_flux |> filter(location_name == uselake) |> 
+        group_by(year = year(chosen_date)) |> 
+        summarise(flux = mean(flux_W_m2, na.rm = TRUE)) 
+    ) |> 
+    left_join(
     ice.dec |> filter(location_name == uselake) |> 
     group_by(year = year(date_time)) |> 
     summarise(iceZ = mean(z_water_m, na.rm = TRUE)) 
@@ -127,7 +131,6 @@ for (i in 1:4) {
         group_by(year = year(date_time)) |> 
         summarise(LL = mean(masl, na.rm = TRUE))
     ) |> 
-    
     arrange(year) |> 
     mutate(ice.diff = c(NA,diff(iceZ))) |> 
     mutate(temp.diff = c(NA,diff(temp))) |> 
@@ -146,7 +149,12 @@ for (i in 1:4) {
   output.fit4[[i]] <- lm(temp ~ LL, data = fit.interp)
   output.fit5[[i]] <- lm(temp ~ iceZ, data = fit.interp)
   output.fit5.5[[i]] <- lm(temp ~ LL + iceZ, data = fit.interp)
-  output.fit6[[i]] <- lm(temp ~ LL + iceZ + ice.diff + LL, data = fit.interp)
+  output.fit6[[i]] <- lm(temp ~ LL + iceZ + ice.diff, data = fit.interp)
+  ####################################### FIT heat flux #########################################################
+  # Fit a linear model
+  output.fit7[[i]] <- lm(flux ~ iceZ + ice.diff, data = fit.interp)
+  output.fit8[[i]] <- lm(flux ~ ice.diff, data = fit.interp)
+  output.fit9[[i]] <- lm(flux ~ iceZ, data = fit.interp)
   
 }
 
@@ -158,19 +166,6 @@ full.predict.dec = bind_rows(output.predict.dec) |>
   mutate(location_name = factor(location_name, levels = c('Lake Fryxell','Lake Hoare', 'East Lake Bonney', 'West Lake Bonney'))) 
 full.interp = bind_rows(interp.out) |>
   mutate(location_name = factor(location_name, levels = c('Lake Fryxell','Lake Hoare', 'East Lake Bonney', 'West Lake Bonney'))) 
-  
-
-plotCustom = list(  scale_colour_grey(end = 0.5),
-                    scale_fill_manual(values = usecolors),
-                    theme_bw(base_size = 9),
-                    facet_wrap(~location_name, scales = 'free_y', nrow = 1),
-                    scale_x_continuous(limits = c(1993,2024), breaks = c(2000,2010,2020)), 
-                    theme(axis.title.x = element_blank(),
-                          legend.position = 'none',
-                          legend.title = element_blank(),
-                          strip.background = element_rect(fill = "white", color = NA),  # Set background to white and remove border
-                          strip.text = element_text(color = "black", face = "bold", size = 10))
-                    )
 
 p1 = ggplot(full.predict, aes(x = dec.date, y = fit.temp)) +
   geom_ribbon(aes(ymin = lower.temp, ymax = upper.temp, x = dec.date, fill = location_name), alpha = 0.5,
@@ -212,38 +207,37 @@ p3 = ggplot(full.predict, aes(x = dec.date, y = fit.LL)) +
   geom_ribbon(aes(ymin = lower.LL - lower.ice, ymax = upper.LL - upper.ice, x = dec.date, fill = location_name), alpha = 0.5,
               inherit.aes = FALSE) +
   geom_line(aes(y = fit.LL - fit.ice)) +
-  labs(y = "Lake & Water Level (m)")  +
+  labs(y = "Lake & Water\nLevel (m)")  +
   plotCustom +
   theme(strip.background = element_blank(), strip.text.x = element_blank())
 
 # Plots of Diffs 
 p5 = ggplot(full.interp) +
-  geom_col(aes(x = dec.date, y = temp.diff, fill = location_name)) +
-  ylab('Temp Diff (°C)') +
-  ylim(-0.30,0.36) +
+  geom_col(aes(x = dec.date, y = flux, fill = location_name)) +
+  ylab('∆ Heat Flux\n(W/m2)') +
+  ylim(-1.2,0.75) +
   plotCustom + 
   theme(strip.background = element_blank(), strip.text.x = element_blank())
 
 p6 = ggplot(full.interp) +
   geom_col(aes(x = dec.date, y = ice.diff, fill = location_name)) +
-  ylab('Ice Diff (°C)') +
+  ylab('∆ Ice (m)') +
   ylim(-1.5,0.75) +
   plotCustom + 
   theme(strip.background = element_blank(), strip.text.x = element_blank())
 
 p7 = ggplot(full.interp) +
   geom_col(aes(x = dec.date, y = LL.diff, fill = location_name)) +
-  ylab('LL Diff (°C)') +
+  ylab('∆ LL (m)') +
   ylim(-0.25,0.83) +
   plotCustom + 
   theme(strip.background = element_blank(), strip.text.x = element_blank())
 
 p1/p2/p3/p5/p6/p7 + 
-  plot_layout(heights = c(1.5,1.5,1.5,1,1,1)) +
+  plot_layout(heights = c(1.5,1.5,1.5,1.5,1,1)) +
   plot_annotation(tag_levels = 'a', tag_suffix = ')') &
   theme(plot.tag = element_text(size = 8))
 ggsave(paste0('figures/Fig5_GAMS.png'), width = 6.5, height = 7, dpi = 500)
-
 
 ################ Assess model fits #################
 getCoeffs <- function(i, usefit) {
@@ -305,6 +299,10 @@ coeffs_fit4 = bind_rows(lapply(X = 1:4, getCoeffs, usefit = output.fit4))
 coeffs_fit5 = bind_rows(lapply(X = 1:4, getCoeffs, usefit = output.fit5))
 coeffs_fit5.5 = bind_rows(lapply(X = 1:4, getCoeffs, usefit = output.fit5.5))
 coeffs_fit6 = bind_rows(lapply(X = 1:4, getCoeffs, usefit = output.fit6))
+
+coeffs_fit7 = bind_rows(lapply(X = 1:4, getCoeffs, usefit = output.fit7))
+coeffs_fit8 = bind_rows(lapply(X = 1:4, getCoeffs, usefit = output.fit8))
+coeffs_fit9 = bind_rows(lapply(X = 1:4, getCoeffs, usefit = output.fit9))
 
 latexTable <- function(coefffit, usecols = 8) {
   # Create the LaTeX table
