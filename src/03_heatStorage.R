@@ -151,9 +151,11 @@ t5 = ggplot(heat_flux, aes(x = chosen_date, y = flux_W_m2, color = location_name
   geom_point() +
   geom_hline(yintercept = 0, linetype = "dashed", color = "gray50") +
   scale_color_manual(values = usecolors, name = 'Lake') +
-  ylab("∆ Heat Flux (W/m²)") +
+  # ylab("Heat Flux (W/m²)") +
+  ylab('Heat Flux (W m^<sup>-2</sup>)') +
   theme_bw(base_size = 9) +
   theme(axis.title.x = element_blank(),
+        axis.title.y = element_markdown(),
         legend.position = 'bottom',
         legend.title = element_blank(),
         legend.text = element_text(size = 7),

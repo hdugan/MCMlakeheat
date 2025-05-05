@@ -1,3 +1,27 @@
+# Selection of Representative Fall Profile Dates
+#
+# To compare lake profiles across years, we selected a single representative
+# fall date for each lake that was most consistently sampled over time. Profiles
+# were commonly collected on different dates each year, so to maximize
+# interannual comparability, we identified the day of year (DOY) that minimized
+# the total difference between actual sampling dates and a standardized
+# reference date.
+#
+# For each lake, we iteratively tested all DOYs between 300 and 365 (late
+# October to December 31). For each candidate DOY, we calculated the absolute
+# difference in days between this reference date and the actual sampling dates
+# for each year. When multiple profiles were collected in a single year, we used
+# the earlier date, the later date, or their average—whichever was closest to
+# the reference DOY. We summed these minimum distances across all years, and
+# selected the DOY that minimized this total distance as the representative
+# sampling date for that lake. This approach allowed us to identify a
+# lake-specific fall date that was most consistently sampled across years,
+# reducing variability due to shifting sampling schedules.
+#
+# Once the optimal DOY was determined, we extracted the corresponding closest
+# actual profile (or average of two) for each year to create a consistent annual
+# time series of fall conditions.
+
 # Highlight profiles used for averaging 
 yday.list = list()
 counter <- 1  # to index the list

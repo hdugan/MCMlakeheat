@@ -71,7 +71,7 @@ FH
 h1 + h5 + h2 + h6 + h3 + h7 + h4 + h8 +
   plot_layout(design = layout) + plot_annotation(tag_levels = 'a', tag_suffix = ')') &
   theme(plot.tag = element_text(size = 8))
-ggsave('figures/FigSI_HeatMap2.png', width = 6, height = 6, dpi = 500)
+ggsave('figures/SI_HeatMap2.png', width = 6, height = 6, dpi = 500)
 
 ##########################################################################################
 ######### Plot timeseries ##########
@@ -145,7 +145,7 @@ h.ice / h.wc / h.ts +
   plot_layout(design = layout) + plot_annotation(tag_levels = 'a', tag_suffix = ')') &
   theme(plot.tag = element_text(size = 8))
 
-ggsave('figures/FigSI_HeatContent.png', width = 6, height = 4, dpi = 500)
+ggsave('figures/SI_HeatContent.png', width = 6, height = 4, dpi = 500)
 
 ##########################################################################################
 # Output SI figure comparing 1-D temp to area-weighted temp

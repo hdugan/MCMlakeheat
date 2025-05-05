@@ -328,7 +328,9 @@ icebox = df.full.ice |> filter(isIce == TRUE) |> group_by(location_name, date_ti
   left_join(toptemp)
 
 # Check plot - temperature
-ct1 = ggplot(df.full.ice) +
+ct1 = ggplot(df.full.ice |> 
+               bind_rows(data.frame(location_name = 'East Lake Bonney', depth.asl = 22.4)) |> # This is just here to trick the yaxis range
+               mutate(location_name = factor(location_name, levels = c('Lake Fryxell','Lake Hoare', 'East Lake Bonney', 'West Lake Bonney')))) + 
   geom_rect(data = icebox,
             aes(xmin = ctd_temp_c, xmax = ctd_temp_c, ymin = max.depth, ymax = min.depth, group = year(date_time)), 
             color = 'grey50',size = 0.3) +
@@ -344,7 +346,9 @@ ct1 = ggplot(df.full.ice) +
   scale_color_manual(values = c('gold','gold3'), name = 'Year')
 
 # Check plot - conductivity
-ct2 = ggplot(df.full.ice) +
+ct2 = ggplot(df.full.ice |> 
+               bind_rows(data.frame(location_name = 'East Lake Bonney', depth.asl = 22.4)) |> 
+               mutate(location_name = factor(location_name, levels = c('Lake Fryxell','Lake Hoare', 'East Lake Bonney', 'West Lake Bonney')))) + # This is just here to trick the yaxis range
   geom_rect(data = icebox,
             aes(xmin = ctd_conductivity_mscm, xmax = ctd_conductivity_mscm, ymin = max.depth, ymax = min.depth, group = year(date_time)), 
             color = 'grey50',size = 0.3) +
@@ -378,8 +382,11 @@ diffprofile = df.full.ice |>
   select(depth.asl, location_name, condUse) |> 
   left_join(useprofile) |> 
   mutate(newCond = condUse - initialCond) |> 
-  filter(!is.na(newCond))
-
+  filter(!is.na(newCond)) |> 
+  bind_rows(data.frame(location_name = 'East Lake Bonney', depth.asl = 25.5)) |> # This is just here to trick the yaxis range
+  bind_rows(data.frame(location_name = 'East Lake Bonney', depth.asl = 59.1)) |> # This is just here to trick the yaxis range
+  mutate(location_name = factor(location_name, levels = c('Lake Fryxell','Lake Hoare', 'East Lake Bonney', 'West Lake Bonney')))
+  
 c2 = ggplot(diffprofile) +
   geom_path(aes(x = newCond, y = depth.asl, group = date_time, color = year(date_time))) +
   ylab('Elevation (m asl)') + xlab('\u0394  Conductivity (mS cm^-1 )') +
@@ -394,7 +401,11 @@ diffprofile = df.full.ice |>
   select(depth.asl, location_name, tempUse) |> 
   left_join(useprofile) |> 
   mutate(newTemp = tempUse - initialTemp) |> 
-  filter(!is.na(newTemp))
+  filter(!is.na(newTemp)) |> 
+  bind_rows(data.frame(location_name = 'East Lake Bonney', depth.asl = 25.5)) |> # This is just here to trick the yaxis range
+  bind_rows(data.frame(location_name = 'East Lake Bonney', depth.asl = 59.1)) |> # This is just here to trick the yaxis range
+  mutate(location_name = factor(location_name, levels = c('Lake Fryxell','Lake Hoare', 'East Lake Bonney', 'West Lake Bonney')))
+
 c1 = ggplot(diffprofile) +
   geom_path(aes(x = newTemp, y = depth.asl, group = date_time, color = year(date_time))) +
   ylab('Elevation (m asl)') + xlab('\u0394 Temperature (°C)') +

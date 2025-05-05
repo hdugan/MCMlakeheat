@@ -327,6 +327,11 @@ latexTable(coeffs_fit5.5 |> bind_rows(coeffs_fit5) |> bind_rows(coeffs_fit4) |>
              mutate(Lake = factor(Lake, levels = c('LF','LH','ELB','WLB'))) |> 
              arrange(Lake), usecols = 9)
 
+# Supplemental Table for Manuscript 
+latexTable(coeffs_fit7 |> bind_rows(coeffs_fit8) |> bind_rows(coeffs_fit9) |>
+             mutate(Lake = factor(Lake, levels = c('LF','LH','ELB','WLB'))) |> 
+             arrange(Lake), usecols = 9)
+
 
 # Table for Manuscript 
 #### r values for model correlation using "pearson" method ####
@@ -361,5 +366,3 @@ latexTable(coeffs_fit5.5 |> filter(Lake == 'LF') |>
              mutate(Lake = factor(Lake, levels = c('LF','LH','ELB','WLB'))) |> 
              arrange(Lake), usecols = 8)
 
-
-# round(cor(interp.out[[4]]$temp, interp.out[[4]]$iceZ, use = 'pairwise.complete.obs'),3)

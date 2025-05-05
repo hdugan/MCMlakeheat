@@ -138,6 +138,7 @@ kendall.w(data = sync2, nrands = 999)
 col1 = c(1,1,1,2,2,3)
 col2 = c(2,3,4,3,4,4)
 for (i in 1:6) {
+  print(i)
   ts1 = sync2[,col1[i]]
   ts2 = sync2[,col2[i]]
   
