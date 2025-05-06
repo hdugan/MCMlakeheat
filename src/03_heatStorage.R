@@ -212,7 +212,9 @@ heat.day = heat.day |>
 
 
 # Output heat data 
-write_csv(heat.day, 'dataout/MDVLakes_dailyHeatStorage.csv')
-write_csv(heat_flux, 'dataout/MDVLakes_dailyHeatFlux.csv')
+
+write_csv(hypo.fill |> select(-depth.asl.char, -specCond_5, -cutoffDepth), 'dataout/MDVLakes_depthDiscrete.csv')
+write_csv(heat.day |> select(-dec.date, -yday), 'dataout/MDVLakes_heatStorage.csv')
+write_csv(heat_flux |> select(-dec.date), 'dataout/MDVLakes_annualHeatFlux.csv')
 
 

@@ -1,3 +1,4 @@
+usecolors = c("#BB9F2F", "#94B9AF", "#942911", "#593837")
 
 plotCustom = list(scale_colour_grey(end = 0.5),
                   scale_fill_manual(values = usecolors),
