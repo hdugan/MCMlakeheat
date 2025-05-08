@@ -62,32 +62,32 @@ t4 = makeTemp('West Lake Bonney', filllimits = c(-4.5,7))
 t1 + t2 + t3 + t4
 ggsave('figures/SI_CTD_Temp.png', width = 6, height = 4, dpi = 500)
 
-##################### Create daily totals #####################
-hypo.join |> filter(location_name == "Lake Hoare") |> 
-  filter(depth.asl <= 55 & depth.asl >= 48) |> 
-  select(heat_J, heat_J_m2, tempUse) |> 
-  summarise(mean(heat_J_m2), min(heat_J_m2), max(heat_J_m2), 
-            mean(tempUse), min(tempUse), max(tempUse))
-# For Lake Hoare, Heat J/m2 between 50-55 m ~ 103634 J/m2
-# For Lake Hoare, temp °C between 50-55 m ~ 0.223 °C
-
-# Problem is not all casts go deep enough, specifically for Lake Hoare
-hoare.dates = hypo.join |> filter(location_name == "Lake Hoare") |> 
-  group_by(date_time) |> summarise_all(first) |> pull(date_time)
-
-fill.gaps.LH = expand.grid(location_name = 'Lake Hoare',
-                       date_time = hoare.dates,
-                       depth.asl.char = as.character(round(seq(48,75, by = 0.1),1))) |> 
-  left_join(hypo.use, by = join_by(depth.asl.char, location_name)) |> 
-  arrange(location_name, date_time, desc(depth.asl.char)) |> 
-  left_join(hypo.join) |> 
-  mutate(depth.asl = as.numeric(depth.asl.char)) |> 
-  mutate(tempUse = if_else(is.na(tempUse) &
-                              depth.asl < 58, 0.22659, tempUse)) |> 
-  mutate(heat_J_m2 = if_else(is.na(heat_J_m2) &
-                               depth.asl < 58, 103634, heat_J_m2)) |> 
-  mutate(heat_J = if_else(is.na(heat_J) &
-                            depth.asl < 58, heat_J_m2*Area_2D, heat_J)) 
+#####################  #####################
+# hypo.join |> filter(location_name == "Lake Hoare") |> 
+#   filter(depth.asl <= 55 & depth.asl >= 48) |> 
+#   select(heat_J, heat_J_m2, tempUse) |> 
+#   summarise(mean(heat_J_m2), min(heat_J_m2), max(heat_J_m2), 
+#             mean(tempUse), min(tempUse), max(tempUse))
+# # For Lake Hoare, Heat J/m2 between 50-55 m ~ 103634 J/m2
+# # For Lake Hoare, temp °C between 50-55 m ~ 0.223 °C
+# 
+# # Problem is not all casts go deep enough, specifically for Lake Hoare
+# hoare.dates = hypo.join |> filter(location_name == "Lake Hoare") |> 
+#   group_by(date_time) |> summarise_all(first) |> pull(date_time)
+# 
+# fill.gaps.LH = expand.grid(location_name = 'Lake Hoare',
+#                        date_time = hoare.dates,
+#                        depth.asl.char = as.character(round(seq(48,75, by = 0.1),1))) |> 
+#   left_join(hypo.use, by = join_by(depth.asl.char, location_name)) |> 
+#   arrange(location_name, date_time, desc(depth.asl.char)) |> 
+#   left_join(hypo.join) |> 
+#   mutate(depth.asl = as.numeric(depth.asl.char)) |> 
+#   mutate(tempUse = if_else(is.na(tempUse) &
+#                               depth.asl < 58, 0.22659, tempUse)) |> 
+#   mutate(heat_J_m2 = if_else(is.na(heat_J_m2) &
+#                                depth.asl < 58, 103634, heat_J_m2)) |> 
+#   mutate(heat_J = if_else(is.na(heat_J) &
+#                             depth.asl < 58, heat_J_m2*Area_2D, heat_J)) 
 
 # Take new extrapolated Lake Hoare dataframe and join to other lakes
 # Add cutoff depth to align bottom of most profiles
@@ -97,7 +97,7 @@ hypo.fill = hypo.join |>
   mutate(cutoffDepth = case_when(location_name == 'East Lake Bonney' ~ 25,
                                  location_name == 'West Lake Bonney' ~ 25,
                                  location_name == 'Lake Fryxell' ~ 2.5,
-                                 location_name == 'Lake Hoare' ~ 58)) |> 
+                                 location_name == 'Lake Hoare' ~ 48)) |> 
   filter(depth.asl >= cutoffDepth) 
 
 # Calculate heat flux between profiles. Use chosen dates to keep profiles of interest (see samplingdays.png)
@@ -108,16 +108,32 @@ usedates = chosendates2 |>
   pivot_longer(cols = 3:4, values_to = 'date_time') |> 
   filter(!is.na(date_time))
 
+# firstprofile = hypo.fill |> 
+#   mutate(tempV = tempUse * vol_layer_m3) |> 
+#   select(location_name, date_time, year, depth.asl.char, depth.asl, depth_m, tempUse, tempV, temp_FPD, salinity_g_kg, spHeat_J_kgK, density_kg_m3, 
+#          ice.approx, masl.approx, volUse, Area_2D) |> 
+#   inner_join(usedates |> select(-name), by = join_by(location_name, date_time)) |> # select only chosen dates
+#   group_by(location_name, wateryear, depth.asl.char) |> 
+#   summarise_all(mean, na.rm = T) |> 
+#   mutate(Q_layer = density_kg_m3 * spHeat_J_kgK * temp_FPD * Area_2D * 0.1) |>  # 0.1 is dz layer depth, in meters 
+#   left_join(chosendates2 |> select(location_name, wateryear, chosen_date)) |> 
+#   arrange(location_name, wateryear, depth.asl)
+
+# Calculate change in temp between profiles 
 firstprofile = hypo.fill |> 
   mutate(tempV = tempUse * vol_layer_m3) |> 
-  select(location_name, date_time, year, depth.asl.char, depth.asl, tempUse, tempV, salinity_g_kg, spHeat_J_kgK, density_kg_m3, 
+  select(location_name, date_time, year, depth.asl.char, depth.asl, depth_m, tempUse, tempV, salinity_g_kg, spHeat_J_kgK, density_kg_m3, 
          ice.approx, masl.approx, volUse, Area_2D) |> 
-  inner_join(usedates |> select(-name), by = join_by(location_name, date_time)) |> # select only chosen dates
+  inner_join(usedates |> select(-name), by = join_by(location_name, date_time), relationship = "many-to-many") |> # select only chosen dates
   group_by(location_name, wateryear, depth.asl.char) |> 
-  summarise_all(mean, na.rm = T) |> 
-  mutate(Q_layer = density_kg_m3 * spHeat_J_kgK * tempUse * Area_2D * 0.1) |>  # 0.1 is dz layer depth, in meters 
-  left_join(chosendates2 |> select(location_name, wateryear, chosen_date)) |> 
-  arrange(location_name, wateryear, depth.asl)
+  summarise_all(mean, na.rm = T) |> # Take the mean when there are multiple dates
+  arrange(location_name, desc(depth.asl), year) |> 
+  group_by(location_name, depth.asl.char) |>
+  mutate(tempZero = if_else(is.na(tempUse), 0, tempUse)) |> 
+  mutate(tempdiff = c(NA,diff(tempZero))) |> 
+  arrange(location_name, wateryear, desc(depth.asl)) |> 
+  mutate(Q_layer = density_kg_m3 * spHeat_J_kgK * tempdiff * Area_2D * 0.1) |>  # 0.1 is dz layer depth, in meters 
+  left_join(chosendates2 |> select(location_name, wateryear, chosen_date))
 
 # Test plot to see if profile averages looks good           
 ggplot(firstprofile) +
@@ -132,19 +148,23 @@ heat_flux <- firstprofile %>%
     vol = sum(volUse, na.rm = T), 
     tempV = sum(tempV, na.rm = T)/vol, tempUse = mean(tempUse, na.rm = T),
     LL = first(masl.approx),
-    ice.approx = mean(ice.approx, na.rm = T),
+    ice.approx = -mean(ice.approx, na.rm = T),
     .groups = "drop"
   ) %>%
   arrange(location_name, wateryear, chosen_date) |> 
   group_by(location_name) %>%
   mutate(
-    delta_Q = Q_total - lag(Q_total),
+    #delta_Q = Q_total - lag(Q_total),
     delta_t = as.numeric(difftime(chosen_date, lag(chosen_date), units = "secs")),
-    flux_W = delta_Q / delta_t,
+    delta_temp = tempUse - lag(tempUse),
+    flux_W = Q_total / delta_t,
     flux_W_m2 = flux_W / mean(ctd$Area_2D, na.rm = TRUE)  # or use surface area
   ) |> 
   mutate(location_name = factor(location_name, levels = c('Lake Fryxell','Lake Hoare', 'East Lake Bonney', 'West Lake Bonney'))) |> 
   mutate(dec.date = decimal_date(chosen_date))
+
+ggplot(heat_flux) + geom_point(aes(x = delta_temp, y = flux_W_m2)) +
+  geom_point(aes(x = delta_temp, y = flux_W_m2, col = location_name))
 
 t5 = ggplot(heat_flux, aes(x = chosen_date, y = flux_W_m2, color = location_name)) +
   geom_line(linewidth = 1) +
@@ -161,7 +181,7 @@ t5 = ggplot(heat_flux, aes(x = chosen_date, y = flux_W_m2, color = location_name
         legend.text = element_text(size = 7),
         legend.key.size = unit(0.2,'cm'),
         plot.margin = margin(2,2,2,2),
-        legend.margin = margin(0, 0, 0, 0))
+        legend.margin = margin(0, 0, 0, 0)); t5
 
 t6 = t1 + t2 +t3 + t4 + plot_layout(guides = 'collect') &
   # plot_annotation(tag_levels = 'a', tag_suffix = ')') &

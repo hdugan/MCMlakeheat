@@ -1,49 +1,52 @@
 library(synchrony)
 
-# Impact on melting ice (adding water) versus warming water column based on Lake Fryxell 
-a = hypo.join |> filter(location_name == 'Lake Fryxell' & date_time == as.Date('2023-11-13'))
-# current heat content
-a |> 
-  summarise(ice.approx = mean(ice.approx, na.rm = T), heat_J = sum(heat_J, na.rm = T), heatIce_J = sum(heatIce_J, na.rm = T), 
-            Area_2D = first(Area_2D)) |> 
-  mutate(heatTot_J_m2 = (heat_J - heatIce_J)/Area_2D/1e6)
-
-# if you melted a layer of ice
-a |> 
-  mutate(tempUse = if_else(depth.asl >= 14.7 & depth.asl <= 15.7, 0, tempUse)) |>
-  mutate(iceDensity_kgm3 = if_else(depth.asl >= 14.7 & depth.asl <= 15.7, NA, iceDensity_kgm3)) |>
-  mutate(temp_FPD = tempUse - FPD) %>% # set baseline temperature to -5°C
-  mutate(spHeat_J_m3K = spHeat_J_kgK * density_kg_m3) %>% 
-  # latent heat of ice = density * thickness *  latent heat of ice (334000 J/kg)
-  mutate(LHice_J_m3 = iceDensity_kgm3 * 334000) |> 
-  mutate(heatIce_J = LHice_J_m3 * vol_layer_m3) |> 
-  mutate(heat_J = spHeat_J_m3K * vol_layer_m3 * temp_FPD) %>% 
-  mutate(heat_J_m2 = heat_J/Area_2D) |> 
-  summarise(ice.approx = mean(ice.approx, na.rm = T), heat_J = sum(heat_J, na.rm = T), heatIce_J = sum(heatIce_J, na.rm = T), 
-            Area_2D = first(Area_2D)) |> 
-  mutate(heatTot_J_m2 = (heat_J - heatIce_J)/Area_2D/1e6)
-
-# If you warmed the water column 2°C
-a |> 
-  mutate(tempUse = tempUse + 2) |>
-  # mutate(tempUse = if_else(depth.asl >= 14.7 & depth.asl <= 15.7, 0, tempUse)) |>
-  mutate(temp_FPD = tempUse - FPD) %>% # set baseline temperature to -5°C
-  mutate(spHeat_J_m3K = spHeat_J_kgK * density_kg_m3) %>% 
-  # latent heat of ice = density * thickness *  latent heat of ice (334000 J/kg)
-  mutate(LHice_J_m3 = iceDensity_kgm3 * 334000) |> 
-  mutate(heatIce_J = LHice_J_m3 * vol_layer_m3) |> 
-  mutate(heat_J = spHeat_J_m3K * vol_layer_m3 * temp_FPD) %>% 
-  mutate(heat_J_m2 = heat_J/Area_2D) |> 
-  summarise(ice.approx = mean(ice.approx, na.rm = T), heat_J = sum(heat_J, na.rm = T), heatIce_J = sum(heatIce_J, na.rm = T), 
-            Area_2D = first(Area_2D)) |> 
-  mutate(heatTot_J_m2 = (heat_J - heatIce_J)/Area_2D/1e6)
+# # Impact on melting ice (adding water) versus warming water column based on Lake Fryxell
+# a = hypo.join |> filter(location_name == 'Lake Fryxell' & date_time == as.Date('2023-11-13'))
+# # current heat content
+# a |>
+#   summarise(ice.approx = mean(ice.approx, na.rm = T), heat_J = sum(heat_J, na.rm = T), heatIce_J = sum(heatIce_J, na.rm = T),
+#             Area_2D = first(Area_2D)) |>
+#   mutate(heatTot_J_m2 = (heat_J - heatIce_J)/Area_2D/1e6)
+# 
+# # if you melted a layer of ice
+# a |>
+#   mutate(tempUse = if_else(depth.asl >= 14.7 & depth.asl <= 15.7, 0, tempUse)) |>
+#   mutate(iceDensity_kgm3 = if_else(depth.asl >= 14.7 & depth.asl <= 15.7, NA, iceDensity_kgm3)) |>
+#   mutate(temp_FPD = tempUse - FPD) %>% # set baseline temperature to -5°C
+#   mutate(spHeat_J_m3K = spHeat_J_kgK * density_kg_m3) %>%
+#   # latent heat of ice = density * thickness *  latent heat of ice (334000 J/kg)
+#   mutate(LHice_J_m3 = iceDensity_kgm3 * 334000) |>
+#   mutate(heatIce_J = LHice_J_m3 * vol_layer_m3) |>
+#   mutate(heat_J = spHeat_J_m3K * vol_layer_m3 * temp_FPD) %>%
+#   mutate(heat_J_m2 = heat_J/Area_2D) |>
+#   summarise(ice.approx = mean(ice.approx, na.rm = T), heat_J = sum(heat_J, na.rm = T), heatIce_J = sum(heatIce_J, na.rm = T),
+#             Area_2D = first(Area_2D)) |>
+#   mutate(heatTot_J_m2 = (heat_J - heatIce_J)/Area_2D/1e6)
+# 
+# # If you warmed the water column 2°C
+# a |>
+#   mutate(tempUse = tempUse + 2) |>
+#   # mutate(tempUse = if_else(depth.asl >= 14.7 & depth.asl <= 15.7, 0, tempUse)) |>
+#   mutate(temp_FPD = tempUse - FPD) %>% # set baseline temperature to -5°C
+#   mutate(spHeat_J_m3K = spHeat_J_kgK * density_kg_m3) %>%
+#   # latent heat of ice = density * thickness *  latent heat of ice (334000 J/kg)
+#   mutate(LHice_J_m3 = iceDensity_kgm3 * 334000) |>
+#   mutate(heatIce_J = LHice_J_m3 * vol_layer_m3) |>
+#   mutate(heat_J = spHeat_J_m3K * vol_layer_m3 * temp_FPD) %>%
+#   mutate(heat_J_m2 = heat_J/Area_2D) |>
+#   summarise(ice.approx = mean(ice.approx, na.rm = T), heat_J = sum(heat_J, na.rm = T), heatIce_J = sum(heatIce_J, na.rm = T),
+#             Area_2D = first(Area_2D)) |>
+#   mutate(heatTot_J_m2 = (heat_J - heatIce_J)/Area_2D/1e6)
 
 
 ############ Synchrony for Temperature ###########
-sync1 = data.frame(LF_temp = c(output.predict.dec[[1]]$fit.temp), 
-                   LH_temp = c(output.predict.dec[[2]]$fit.temp,NA), 
-                   ELB_temp = output.predict.dec[[3]]$fit.temp, 
-                   WLB_temp = output.predict.dec[[4]]$fit.temp)
+sync1 = annual.df |> select(year, location_name, temp) |> 
+  pivot_wider(names_from = location_name, values_from = temp) |> 
+  arrange(year) |> 
+  filter(year >= 1996) |> 
+  select(-year) |> 
+  rename(LF_temp = 1, LH_temp = 2, ELB_temp = 3, WLB_temp = 4) |> 
+  select(-LH_temp)
 
 options(digits=2)
 correlation_table <- corrr::correlate(sync1, method = "pearson")
@@ -54,18 +57,18 @@ cor_2
 #### Synchrony package
 
 # Pair wise synchrony for temperature 
-sync1.out = data.frame(pair = c('LF-LH','LF-ELB','LF-WLB','LH-ELB','LH-WLB','ELB-WLB'), 
+sync1.out = data.frame(pair = c('LF-ELB','LF-WLB','ELB-WLB'), 
                        meanCorr = NA, meanCorr.p = NA,
                        Concur = NA, Concur.p = NA,
                        Phase = NA, Phase.p = NA)
 
 ## Compute the concordance (and its statistical significance) between multiple variable
 kendall.w(data = sync1, nrands = 999)
-kendall.w(data = sync1[-3], nrands = 999)
+# kendall.w(data = sync1[-3], nrands = 999)
 
-col1 = c(1,1,1,2,2,3)
-col2 = c(2,3,4,3,4,4)
-for (i in 1:6) {
+col1 = c(1,1,2)
+col2 = c(2,3,3)
+for (i in 1:3) {
   ts1 = sync1[,col1[i]]
   ts2 = sync1[,col2[i]]
   
@@ -84,7 +87,7 @@ for (i in 1:6) {
   # troughs (local minima) between pairs of time series (Buonaccorsi et al. 2001)
   # This metric varies between 0 when the time series never peak and trough together, and 1 when the time
   # series always peak and trough simultaneously
-  concurence = peaks(ts1, ts2, nrands = 999)
+  concurence = peaks(ts1, ts2, nrands = 99)
   sync1.out$Concur[i] = concurence$obs
   sync1.out$Concur.p[i] = concurence$pval
   
@@ -94,7 +97,7 @@ for (i in 1:6) {
   # Function to safely handle phase sync in cases where it fails 
   safe_phase.sync <- function(ts1, ts2) {
     tryCatch({
-      phase.sync(ts1, ts2, mins = TRUE, nrands = 999)
+      phase.sync(ts1, ts2, mins = FALSE, nrands = 99)
     }, error = function(e) {
       if (grepl("need at least two non-NA values to interpolate", e$message)) {
         # return(NA) # Return NA for specific error
@@ -113,10 +116,13 @@ for (i in 1:6) {
 latexTable(sync1.out, usecols = 5)
 
 ############ Synchrony for Ice Thickness ###########
-sync2 = data.frame(LF_temp = c(output.predict.dec[[1]]$fit.ice), 
-                   LH_temp = c(output.predict.dec[[2]]$fit.ice,NA), 
-                   ELB_temp = output.predict.dec[[3]]$fit.ice, 
-                   WLB_temp = output.predict.dec[[4]]$fit.ice)
+sync2 = annual.df |> select(year, location_name, iceZ) |> 
+  pivot_wider(names_from = location_name, values_from = iceZ) |> 
+  arrange(year) |> 
+  filter(year >= 1996) |> 
+  select(-year) |> 
+  rename(LF_temp = 1, LH_temp = 2, ELB_temp = 3, WLB_temp = 4) |> 
+  select(-LH_temp)
 
 options(digits=2)
 correlation_table <- corrr::correlate(sync2, method = "pearson")
@@ -127,7 +133,7 @@ cor_2
 #### Synchrony package
 
 # Pair wise synchrony for temperature 
-sync2.out = data.frame(pair = c('LF-LH','LF-ELB','LF-WLB','LH-ELB','LH-WLB','ELB-WLB'), 
+sync2.out = data.frame(pair = c('LF-ELB','LF-WLB','ELB-WLB'), 
                        meanCorr = NA, meanCorr.p = NA,
                        Concur = NA, Concur.p = NA,
                        Phase = NA, Phase.p = NA)
@@ -135,9 +141,9 @@ sync2.out = data.frame(pair = c('LF-LH','LF-ELB','LF-WLB','LH-ELB','LH-WLB','ELB
 ## Compute the concordance (and its statistical significance) between multiple variable
 kendall.w(data = sync2, nrands = 999)
 
-col1 = c(1,1,1,2,2,3)
-col2 = c(2,3,4,3,4,4)
-for (i in 1:6) {
+col1 = c(1,1,2,3)
+col2 = c(2,3,3)
+for (i in 1:3) {
   print(i)
   ts1 = sync2[,col1[i]]
   ts2 = sync2[,col2[i]]
@@ -157,14 +163,14 @@ for (i in 1:6) {
   # troughs (local minima) between pairs of time series (Buonaccorsi et al. 2001)
   # This metric varies between 0 when the time series never peak and trough together, and 1 when the time
   # series always peak and trough simultaneously
-  concurence = peaks(ts1, ts2, nrands = 999)
+  concurence = peaks(ts1, ts2, nrands = 99)
   sync2.out$Concur[i] = concurence$obs
   sync2.out$Concur.p[i] = concurence$pval
   
   # phase.sync, measures phase synchrony between quasiperiodic times series
   # The strength of phase synchrony can be quantified by a Q index that falls between 0 (no phase synchrony) 
   # and 1 (full phase synchrony) 
-  phase = phase.sync(ts1, ts2, mins = TRUE, nrands = 999)
+  phase = phase.sync(ts1, ts2, mins = FALSE, nrands = 99)
   sync2.out$Phase[i] = phase$Q.obs
   sync2.out$Phase.p[i] = phase$pval
 }
@@ -253,6 +259,10 @@ df.sal |>
 
 # spHeat
 df.spcH |> group_by(location_name) |> 
+  mutate(location_name = factor(location_name, levels = c('Lake Fryxell','Lake Hoare', 'East Lake Bonney', 'West Lake Bonney'))) |> 
+  summarise(min(spHeat_J_kgK, na.rm = T), max(spHeat_J_kgK, na.rm = T))
+
+firstprofile |> group_by(location_name) |> 
   mutate(location_name = factor(location_name, levels = c('Lake Fryxell','Lake Hoare', 'East Lake Bonney', 'West Lake Bonney'))) |> 
   summarise(min(spHeat_J_kgK, na.rm = T), max(spHeat_J_kgK, na.rm = T))
 

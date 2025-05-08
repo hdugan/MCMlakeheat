@@ -161,7 +161,7 @@ ggplot(ice.interp |> filter(month(date_time) %in% c(10,11,12,1))) +
         legend.key.size = unit(0.2,'cm'),
         legend.margin = margin(0, 0, 0, 0))
 
-ggsave('figures/SI_IceThickness.png', width = 6, height = 4, dpi = 500)
+ggsave('figures/SI_IceThickness.png', width = 6, height = 2.5, dpi = 500)
 
 
 ggplot(lake.volume) +

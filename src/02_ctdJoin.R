@@ -445,7 +445,7 @@ bestdates
 
 # Removedate where it's really challenging to get a consistency year to year
 chosendates2 = chosendates |> 
-  filter(!(location_name == 'Lake Hoare' & wateryear <= 2004)) |> 
+  filter(!(location_name == 'Lake Hoare' & wateryear <= 2005)) |> 
   filter(!(location_name == 'Lake Fryxell' & wateryear <= 1995))  
 
 ggplot(samplingdays) +
