@@ -45,9 +45,6 @@ All "00\_" .R scripts are helper scripts that download raw data from EDI
 -   Pull out representative fall profiles
     -   Calculate change in temperature between each layer
     -   Calculte heat flux 
--   Calculate latent heat of ice
-    -   ice density of 900 kg/m3 \* 334000 J/kg
-    -   calculate total joules by multiplying by volume layer
 -   Plot heat flux timeseries
 -   Plot SI figure comparing 1D to area weighted mean temperature 
 -   Export daily data 'dataout/MDVLakes_profileMeans.csv'
