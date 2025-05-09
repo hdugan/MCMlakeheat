@@ -1,4 +1,4 @@
-## Code repository for *Heat storage and thermal dynamics in permanently ice-covered lakes in Antarctica*
+## Code repository for *Ice thickness regulates heat flux in permanently ice-covered lakes in Antarctica*
 
 ### Datasets used:
 Takacs-vesbach, C.D., Priscu, J.C. 2025. Conductivity, temperature, and depth (CTD) vertical profiles collected from lakes in the McMurdo Dry Valleys, Antarctica (1993-2023, ongoing). Environmental Data Initiative. DOI: 10.6073/pasta/004de32b27fc88954abdce0ff8a3bbb3. Dataset accessed 14 April 2025.
