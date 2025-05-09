@@ -23,69 +23,62 @@ All "00\_" .R scripts are helper scripts that download raw data from EDI
 -   Add specific heat capacity using `SW_SpcHeat` function
     -  Rewritten in R from a MATLAB implementation {Source: https://web.mit.edu/seawater/}
 -   Add density using `sw_dens` function
--   Add freezing point by using lookup table 'datain/papers/Bodnar_1993_FreezingPoint_Lookup.csv'
-    -   Create 3rd degree polynomial from lookup table
-    -   Apply polynomial to salinity data
-    -   Anything above 21.2 %wt salinity (eutectic point of pure NaCl) set FPD to 23.2
 -   Add ice thickness by date
     -   Linearly interpolate ice thickness between sampling dates
 -   Export plots
     -   'figures/Fig1_CTD.png' CTD temperature and conductivity profiles
     -   'figures/Fig2_CTDchange.png' Differences in CTD profiles
-    -   'figures/SI_SamplingDays.png' Grid of sampling dates
+-   Find representative fall profile dates `source('src/functions/profileAvgDates.R'`
+    -   'figures/SI_SamplingDays.png' Grid of sampling dates and representative profiles
 
-`03_heatStorage.R`
+`03_heatFlux.R`
 
 -   Get hyposmetry, area and volume for every 0.1 m layer
 -   Check days that have full depth profiles
 -   For deepest sampling depth, assume volume of this layer equals cumulative volume beneath it
--   Use specific heat in J/kg/°C 
--   Calculate total joules heat storage by spHeat \* density \* volume layer \* temperature above freezing point
-    -   Also calculate J/m2 and J/m3
--   Calculate latent heat of ice
-    -   ice density of 900 kg/m3 \* 334000 J/kg
-    -   calculate total joules by multiplying by volume layer
--   Plot heat storage heat maps for the four lakes
--   Plot temperature heat maps for the four lakes
 -   Add a cutoff depth to all profiles
     -   ELB 25 m asl
     -   WLB 25 m asl
     -   LF 2.5 m asl
-    -   LH 58 m asl [shallow, but many short profiles and bottom of LH is very close to 0°C]
--   Calculate daily total heat for lake and ice
--   Limit to between Sep 1 and Dec 15th for all lakes
--   Plot heat map and timeseries
-    -   'figures/Fig3_HeatContent.png'
--   Export daily data 'dataout/MDVLakes_dailyHeatStorage.csv'
+    -   LH 48 m asl
+-   Plot temperature heat maps 
+-   Pull out representative fall profiles
+    -   Calculate change in temperature between each layer
+    -   Calculte heat flux 
+-   Calculate latent heat of ice
+    -   ice density of 900 kg/m3 \* 334000 J/kg
+    -   calculate total joules by multiplying by volume layer
+-   Plot heat flux timeseries
+-   Plot SI figure comparing 1D to area weighted mean temperature 
+-   Export daily data 'dataout/MDVLakes_profileMeans.csv'
+-   Export annual heatflux 'dataout/MDVLakes_annualHeatFlux.csv'
+-   Export depth discrete data 'dataout/MDVLakes_depthDiscrete.csv'
 
 `04_GAMs.R`
 
--   For each lake do the following (limit data to between Sep 1 and Dec 15th)
--   Create gam model of temperature
--   Create gam model of ice thickness (use ice observations not interpolations)
--   Create gam model of lake level (use lake level observations not interpolations)
--   Create monthly dataframe from Oct 1995 to Jan 2024
--   Predict temperature, ice thickness, lake level from GAM at monthly interval
--   Create 95% confidence interval for each model
--   Exclude 2020 (no data collection)
--   For each year, calculate mean temp, ice and lake level data (observational data, not GAM data) between Sep 1 and Dec 15th
-    -   Calculate difference between years
-    -   Using this dataframe, create a series of linear models
+-   For each lake do the following:
+-   Add annual difference in ice thickness and lake level using representative fall dates 
+-   Using this dataframe, create a series of linear models
     ```         
-    lm(temp.diff ~ iceZ + ice.diff + LL.diff, data = fit.interp)
-    lm(temp.diff ~ LL.diff, data = fit.interp)
-    lm(temp.diff ~ ice.diff, data = fit.interp)
-    lm(temp.diff ~ iceZ, data = fit.interp)
-    lm(temp ~ LL, data = fit.interp)
-    lm(temp ~ iceZ, data = fit.interp)
-    lm(temp ~ LL + iceZ, data = fit.interp)
-    lm(temp ~ LL + iceZ + ice.diff + LL, data = fit.interp)
+  ########## Regression models for temperature 
+  lm(temp ~ LL, data = annual.list[[i]])
+  lm(temp ~ iceZ, data = annual.list[[i]])
+  lm(temp ~ LL + iceZ, data = annual.list[[i]])
+  
+  ########## Regression models for heat flux
+  lm(flux ~ LL.diff, data = annual.list[[i]])
+  lm(flux ~ iceZ, data = annual.list[[i]])
+  lm(flux ~ ice.diff, data = annual.list[[i]])
+  lm(flux ~ iceZ + ice.diff, data = annual.list[[i]])
+  
+  ########## Regression models for ice
+  output$reg.ice1[[i]] <- lm(ice.diff ~ iceZ, data = annual.list[[i]])
     ```
--   Output 6 panel figure 'figures/Fig4_GAMS.png'
+-   Output 6 panel figure 'figures/Fig5_GAMS.png'
     -   Mean temp (GAM fit line)
     -   Ice thickness (GAM fit line)
-    -   Lake and water level (GAM fit line)
-    -   Annual temperature difference
+    -   Lake level (GAM fit line)
+    -   Annual heat flux
     -   Annual ice difference
     -   Annual LL difference
 -   Assess model fits
@@ -93,10 +86,16 @@ All "00\_" .R scripts are helper scripts that download raw data from EDI
     -   Get coefficients and significance
     -   Variable Inflation Factors to assess colinearity
     -   Output latex tables
+-   Plot scatter plot of heat flux vs 1) Ice Thickness and 2) ∆Ice
 
-`05_PaperStats.R`
+`05_Synchrony.R`
 
--   Scenario of melting ice vs. warming water temperature and the effect on heat
--   Test synchrony of water column temperature and ice thickness using a variety of synchrony metrics (using GAM fits)
+-   Synchony function to test correlation, statistical significance of Kendall’s W, concurrency,
+and phase synchrony 
+-   Applied to mean water temperature, ice thickness, and heat flux
+
+`06_PaperStats.R`
+
 -   Test autocorrelation between annual differences using `acf` function
 -   Test Variable-lag Granger Causality
+-   Other ranges for paper 

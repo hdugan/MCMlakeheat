@@ -332,24 +332,24 @@ ph1/ph2 + plot_layout(guides = 'collect') +
 
 ggsave('figures/Fig5_scatterplots.png', width = 6, height = 4, dpi = 500)
 
-
-
-coeffs_ice1
-
-ggplot(annual.df) +
-  geom_smooth(aes(x = LL, y = temp, fill = location_name), method = 'lm', col = 'grey50', linetype = 2, linewidth = 0.3, alpha = 0.2) +
-  geom_point(aes(x = LL, y = temp, col= location_name)) +
-  scale_fill_manual(values = usecolors) +
-  scale_color_manual(values = usecolors) +
-  facet_wrap(~location_name, scales = 'free', nrow = 1) +
-  geom_text(
-    data = pvalsIceD, 
-    aes(x = Inf, y = Inf, label = paste0('p = ',p)), 
-    hjust = 1.1, vjust = 1.5, size = 2.5, fontface = "bold", inherit.aes = FALSE) +
-  xlab('Ice Thickness (m)') +
-  ylab('∆ Ice Thickness (m)') +
-  theme_bw(base_size = 9) +
-  theme(axis.title.y = element_markdown(),
-        legend.position = 'none',
-        strip.background = element_blank(), strip.text.x = element_blank())
+# 
+# 
+# coeffs_ice1
+# 
+# ggplot(annual.df) +
+#   geom_smooth(aes(x = LL, y = temp, fill = location_name), method = 'lm', col = 'grey50', linetype = 2, linewidth = 0.3, alpha = 0.2) +
+#   geom_point(aes(x = LL, y = temp, col= location_name)) +
+#   scale_fill_manual(values = usecolors) +
+#   scale_color_manual(values = usecolors) +
+#   facet_wrap(~location_name, scales = 'free', nrow = 1) +
+#   geom_text(
+#     data = pvalsIceD, 
+#     aes(x = Inf, y = Inf, label = paste0('p = ',p)), 
+#     hjust = 1.1, vjust = 1.5, size = 2.5, fontface = "bold", inherit.aes = FALSE) +
+#   xlab('Ice Thickness (m)') +
+#   ylab('∆ Ice Thickness (m)') +
+#   theme_bw(base_size = 9) +
+#   theme(axis.title.y = element_markdown(),
+#         legend.position = 'none',
+#         strip.background = element_blank(), strip.text.x = element_blank())
 
