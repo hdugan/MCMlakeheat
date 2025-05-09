@@ -59,21 +59,23 @@ All "00\_" .R scripts are helper scripts that download raw data from EDI
 -   For each lake do the following:
 -   Add annual difference in ice thickness and lake level using representative fall dates 
 -   Using this dataframe, create a series of linear models
-    ```         
-  ########## Regression models for temperature 
+
+```
+  ### Regression models for temperature 
   lm(temp ~ LL, data = annual.list[[i]])
   lm(temp ~ iceZ, data = annual.list[[i]])
   lm(temp ~ LL + iceZ, data = annual.list[[i]])
   
-  ########## Regression models for heat flux
+  ### Regression models for heat flux
   lm(flux ~ LL.diff, data = annual.list[[i]])
   lm(flux ~ iceZ, data = annual.list[[i]])
   lm(flux ~ ice.diff, data = annual.list[[i]])
   lm(flux ~ iceZ + ice.diff, data = annual.list[[i]])
   
-  ########## Regression models for ice
+  ### Regression models for ice
   output$reg.ice1[[i]] <- lm(ice.diff ~ iceZ, data = annual.list[[i]])
-    ```
+```
+
 -   Output 6 panel figure 'figures/Fig5_GAMS.png'
     -   Mean temp (GAM fit line)
     -   Ice thickness (GAM fit line)
