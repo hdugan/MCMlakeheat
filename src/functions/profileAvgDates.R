@@ -31,10 +31,10 @@ for (lakename in c('Lake Fryxell','Lake Hoare', 'East Lake Bonney', 'West Lake B
     filter(location_name == lakename) |> 
     mutate(wateryear = if_else(month(date_time) >= 10, year + 1, year)) |> 
     group_by(location_name, wateryear, date_time) %>%
-    summarise() |> 
+    dplyr::summarise() |> 
     slice(1:2) |> 
     group_by(location_name, wateryear) |> 
-    summarize(
+    dplyr::summarize(
       date1 = min(date_time),
       date2 = max(date_time),
       .groups = "drop"
@@ -84,10 +84,10 @@ for (lakename in c('Lake Fryxell','Lake Hoare', 'East Lake Bonney', 'West Lake B
       filter(location_name == lakename) |> 
       mutate(wateryear = if_else(month(date_time) >= 10, year + 1, year)) |> 
       group_by(location_name, wateryear, date_time) %>%
-      summarise() |> 
+      dplyr::summarise() |> 
       slice(1:2) |> 
       group_by(location_name, wateryear) |> 
-      summarize(
+      dplyr::summarize(
         date1 = min(date_time),
         date2 = max(date_time),
         .groups = "drop"

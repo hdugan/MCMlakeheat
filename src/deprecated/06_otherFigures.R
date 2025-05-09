@@ -53,6 +53,7 @@ make.tsheat <- function(usename, j) {
           axis.title.y = element_markdown(),
           legend.position = 'none')
 }
+
 h5 = make.tsheat(usename = 'Lake Fryxell', j = 1)
 h6 = make.tsheat(usename = 'Lake Hoare', j = 2)
 h7 = make.tsheat(usename = 'East Lake Bonney', j = 3)
@@ -147,17 +148,4 @@ h.ice / h.wc / h.ts +
 
 ggsave('figures/SI_HeatContent.png', width = 6, height = 4, dpi = 500)
 
-##########################################################################################
-# Output SI figure comparing 1-D temp to area-weighted temp
-
-ggplot(heat.day, aes(x = dec.date, y = tempV, fill = location_name)) +
-  geom_point(size = 0.4, col = 'grey50') +
-  geom_smooth(col = 'grey50', size = 0.3, fill = 'grey80') +
-  geom_point(aes(x = dec.date, y = tempUse, col = location_name), size = 0.4) +
-  geom_smooth(aes(x = dec.date, y = tempUse, col = location_name), size = 0.4) +
-  scale_color_manual(values = usecolors) +
-  labs(y = "Mean Temp (°C)") +
-  plotCustom
-
-ggsave(paste0('figures/SI_tempComp.png'), width = 6.5, height = 2.5, dpi = 500)
 

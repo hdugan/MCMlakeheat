@@ -17,6 +17,7 @@ source('src/00_gethypso.R')
 source('src/functions/SpecHeat_Water_vector.R')
 source('src/functions/salinity_fromDensity.R')
 source('src/functions/plotCustom.R')
+source('src/functions/latexTable.R')
 
 # Round depth to 0.1 m increment
 ctd.join = ctd |> 
@@ -213,52 +214,6 @@ ggplot(df.sal) +
   theme_bw(base_size = 9) +
   facet_wrap(~location_name, scales = 'free')
 
-# ####### Old cold
-# df.spc = df.clean |> 
-#   mutate(specCond.raw = ctd_conductivity_mscm/(1 + 0.020*(ctd_temp_c - 5))) |> # standardize to 5°C
-#   mutate(specCond = as.character(round(specCond.raw / 0.1) * 0.1)) |>  # round to nearest 0.1 m depth, change to character for join
-#   mutate(specCond = if_else(location_name == 'Lake Hoare', as.character(round(specCond.raw / 0.01) * 0.01), specCond)) # For Lake Hoare, round spC to 2 decimals
-# 
-# # Load conductivity/salinity relationship # Not applicable for ELB salinity > 180
-# sal.pred = read_csv('dataout/condSalTransfer.csv') |> 
-#   mutate(specCond = as.character(specCond)) |> 
-#   rename(sal.pred = pred)
-# 
-# df.spc = df.spc |> 
-#   left_join(sal.pred, by = join_by(location_name, specCond))
-# df.spc |> filter(is.na(sal.pred))
-# 
-# # Load salinity/depth relationship
-# salz.pred = read_csv('dataout/salinityTransferTable.csv') |> 
-#   filter(location_name == 'East Lake Bonney') %>%
-#   mutate(depth.asl.char = as.character(depth.asl)) %>%
-#   select(-depth.asl) %>%
-#   bind_rows(. |> filter(year == 1995) |> mutate(year = 1993)) %>% # ions started in 1995, so use 1995 profiles for 1993 and 1994
-#   bind_rows(. |> filter(year == 1995) |> mutate(year = 1994)) %>%
-#   bind_rows(. |> filter(year == 2019) |> mutate(year = 2020)) %>%
-#   bind_rows(. |> filter(year == 2019) |> mutate(year = 2021)) %>%
-#   bind_rows(. |> filter(year == 2019) |> mutate(year = 2022)) %>%
-#   bind_rows(. |> filter(year == 2019) |> mutate(year = 2023))
-# 
-# # If no conductivity value, replace with salinity table 
-# df.spc2 = df.spc |> left_join(salz.pred, by = join_by(year, location_name, depth.asl.char)) |> 
-#   mutate(sal.pred2 = if_else(is.na(sal.pred), pred, sal.pred))
-# 
-# # Ok, but some of the transfer table doesn't go deep enough. Interpolate with constant 
-# df.spc3 = df.spc2 |> 
-#   group_by(location_name, date_time) |> 
-#   mutate(across(c(sal.pred2), ~ na.approx(.x, na.rm = FALSE, maxgap = 50, rule = 2))) |> 
-#   mutate(sal.pred2 = if_else(sal.pred2 < 0, 0, sal.pred2)) %>% 
-#   select(-sal.pred, -pred)
-# 
-# # Check plot 
-# ggplot(df.spc3) +
-#   geom_path(aes(x = sal.pred2, y = depth.asl, group = date_time, color = year(date_time))) +
-#   ylab('Elevation (m asl)') + xlab('Salinity (mg/L)') +
-#   scale_colour_viridis_c(option = 'F', name = 'Year') +
-#   theme_bw(base_size = 9) +
-#   facet_wrap(~location_name, scales = 'free')
-
 ##################### Add specific heat capacity and density ########################
 # equation not build for temperatures < 0°C or S > 180, but what can you do
 # Units J/kg K
@@ -269,40 +224,6 @@ df.spcH = df.sal |>
 
 quantile(df.spcH$spHeat_J_kgK, na.rm = T)
 quantile(df.spcH$density_kg_m3, na.rm = T)
-
-##################### Add freezing point of water ########################
-# This is complicated because no equation exists for salinities > 40. 
-# Using a lookup table from Bodnar 1993
-# https://www-sciencedirect-com.ezproxy.library.wisc.edu/science/article/pii/001670379390378A?via%3Dihub
-bodnar = read_csv('datain/papers/Bodnar_1993_FreezingPoint_Lookup.csv') %>% 
-  mutate(FPD = FPD1+FPD2) %>% 
-  mutate(salinity_g_kg = Salinity_perWt * 10) |> 
-  select(salinity_g_kg, FPD) %>% 
-  arrange(salinity_g_kg) %>% 
-  filter(!is.na(salinity_g_kg))
-
-bodnar.poly = lm(FPD ~ poly(salinity_g_kg, degree = 3), data = bodnar)
-# #create scatterplot
-# df = data.frame(sal.pred2 = 1:213) %>% mutate(my_model = predict(bodnar.poly, .))
-# ggplot(bodnar) + geom_point(aes(x = sal.pred2, y = FPD)) +
-#   geom_point(data = df, aes(x = sal.pred2, y = my_model), col = 'red')
-
-# Lookup table only goes up to eutectic point of pure NaCl (21.2 %wt, FPD = -23.18)
-# Everything above this salinity set FPD to 23.2
-df.spcH = df.spcH %>% 
-  ungroup() %>%
-  mutate(FPD = predict(bodnar.poly, .)) |> # predict freezing point depressing based on polynomial
-  mutate(FPD = -FPD) |> 
-  mutate(FPD = if_else(FPD < -21.21, -21.21, FPD)) #eutectic point of NaCl
-
-df.spcH %>% 
-  ungroup() %>%
-  mutate(FPD = predict(bodnar.poly, .)) |> # predict freezing point depressing based on polynomial
-  mutate(FPD = -FPD) |> 
-  filter(FPD < -21.21)
-
-ggplot(df.spcH) +
-  geom_point(aes(x = salinity_g_kg, y = FPD))
   
 ##################### Add lake ice thickness ########################
 df.full.ice = df.spcH |> 
@@ -343,7 +264,9 @@ ct1 = ggplot(df.full.ice |>
   geom_path(data = spigel_LF, aes(x = Temp_C, y = depth.asl, color = factor(year(date_time))), linewidth = 1) +
   geom_path(data = hoare_LF, aes(x = Temp_C, y = depth.asl, color = factor(year(date_time))), linewidth = 1) +
   geom_path(data = shirtcliffe_bonney_1963, aes(x = Temp_C, y = depth.asl), color = 'gold3', linewidth = 1) +
-  scale_color_manual(values = c('gold','gold3'), name = 'Year')
+  scale_color_manual(values = c('gold','gold3'), name = 'Year') +
+  theme(strip.background = element_rect(fill = "white", color = NA),  # Set background to white and remove border
+        strip.text = element_text(color = "black", face = "bold", size = 10))
 
 # Check plot - conductivity
 ct2 = ggplot(df.full.ice |> 
@@ -357,11 +280,12 @@ ct2 = ggplot(df.full.ice |>
   scale_color_scico(palette = 'bilbao', name = 'Year', direction = -1, end = 0.9) +
   theme_bw(base_size = 9) +
   facet_wrap(~location_name, scales = 'free', nrow = 1) +
-  theme(axis.title.x = element_markdown())
+  theme(axis.title.x = element_markdown(),
+        strip.text = element_blank())
 
 ct1 / ct2 + plot_layout(guides = 'collect') +
   plot_annotation(tag_levels = 'a', tag_suffix = ')') &
-  theme(plot.tag = element_text(size = 8), legend.position = 'bottom', 
+  theme(plot.tag = element_text(size = 8), legend.position = 'bottom',
         legend.key.width = unit(1, 'cm'), legend.key.height = unit(0.3, 'cm'),
         legend.title = element_blank(),
         legend.margin = margin(0, 0, 0, 0))
@@ -392,7 +316,8 @@ c2 = ggplot(diffprofile) +
   ylab('Elevation (m asl)') + xlab('\u0394  Conductivity (mS cm^-1 )') +
   scale_color_scico(palette = 'bilbao', name = 'Year', direction = -1, end = 0.9) +
   theme_bw(base_size = 9) +
-  theme(axis.title.x = element_markdown()) +
+  theme(axis.title.x = element_markdown(),
+        strip.text = element_blank()) +
   facet_wrap(~location_name, scales = 'free', nrow = 1)
 
 # Join
@@ -411,19 +336,31 @@ c1 = ggplot(diffprofile) +
   ylab('Elevation (m asl)') + xlab('\u0394 Temperature (°C)') +
   scale_color_scico(palette = 'bilbao', name = 'Year', direction = -1, end = 0.9) +
   theme_bw(base_size = 9) +
-  theme(axis.title.x = element_markdown()) +
+  theme(axis.title.x = element_markdown(),
+        strip.text = element_blank()) +
   facet_wrap(~location_name, scales = 'free', nrow = 1); c1
 
 diffprofile |> group_by(location_name) |> summarise(first(initialDate))
 
 c1 / c2 + plot_layout(guides = 'collect') +
   plot_annotation(tag_levels = 'a', tag_suffix = ')') &
-  theme(plot.tag = element_text(size = 8), legend.position = 'bottom', 
+  theme(plot.tag = element_text(size = 8), legend.position = 'bottom',
         legend.key.width = unit(1, 'cm'), legend.key.height = unit(0.3, 'cm'),
         legend.title = element_blank(),
         legend.margin = margin(0, 0, 0, 0))
 
-ggsave('figures/Fig2_CTDchange.png', width = 6, height = 5, dpi = 500)
+ggsave('figures/SI_CTDchange.png', width = 6, height = 5, dpi = 500)
+
+# Join all four CTD plots together
+ct1 / c1 / ct2 / c2 + plot_layout(guides = 'collect') +
+  plot_annotation(tag_levels = 'a', tag_suffix = ')') &
+  theme(plot.tag = element_text(size = 8), legend.position = 'bottom', 
+        legend.key.width = unit(1, 'cm'), legend.key.height = unit(0.3, 'cm'),
+        legend.title = element_blank(),
+        plot.margin = margin(0.3, 0.3, 0.3, 0.3),
+        legend.margin = margin(0, 0, 0, 0))
+
+ggsave('figures/Fig2_CTD.png', width = 6, height = 8, dpi = 500)
 
 ####  Sampling Days Plot ####
 samplingdays = df.full.ice |> 
@@ -442,6 +379,8 @@ bestdates
 # 2 Lake Fryxell       329     170 1995-11-25 
 # 3 Lake Hoare         345     246 1995-12-11 
 # 4 West Lake Bonney   327     107 1995-11-23 
+bestdates.df = data.frame(location_name = c('Lake Fryxell','Lake Hoare', 'East Lake Bonney', 'West Lake Bonney'), 
+                          representativeDate = as.Date(c('2023-11-25', '2023-12-11','2023-12-04','2023-11-23')))
 
 # Removedate where it's really challenging to get a consistency year to year
 chosendates2 = chosendates |> 
@@ -449,6 +388,7 @@ chosendates2 = chosendates |>
   filter(!(location_name == 'Lake Fryxell' & wateryear <= 1995))  
 
 ggplot(samplingdays) +
+  geom_vline(data = bestdates.df, aes(xintercept = representativeDate), linetype = 1, col = 'lightblue3') +
   geom_point(data = chosendates, aes(x = fakeyear2, y = wateryear), color = 'red') +
   geom_point(data = chosendates2, aes(x = fakeyear2, y = wateryear), color = 'gold') +
   geom_tile(aes(x = fakeyear2, y = wateryear), linewidth  = 200) +

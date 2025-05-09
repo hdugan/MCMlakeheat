@@ -20,7 +20,7 @@ lakecolor = data.frame(uselake = c('Lake Fryxell','Lake Hoare', 'East Lake Bonne
 # Create empty output lists for linear model results
 output_names <- c("temp.diff1", "temp.diff2", "temp.diff3", "temp.diff4", "temp.diff5", "temp.diff6", 
                   "temp1", "temp2", "temp3", "temp4", "temp5", "temp6", 
-                  "flux1", "flux2", "flux3", "flux4", "flux5")
+                  "flux1", "flux2", "flux3", "flux4", "flux5", 'ice1')
 output <- setNames(vector("list", length(output_names)), paste0("reg.", output_names))
 
 annual.list = list()
@@ -51,6 +51,9 @@ for (i in 1:4) {
   output$reg.flux2[[i]] <- lm(flux ~ iceZ, data = annual.list[[i]])
   output$reg.flux3[[i]] <- lm(flux ~ ice.diff, data = annual.list[[i]])
   output$reg.flux4[[i]] <- lm(flux ~ iceZ + ice.diff, data = annual.list[[i]])
+  
+  ####################################### Regression models for ice #########################################################
+  output$reg.ice1[[i]] <- lm(ice.diff ~ iceZ, data = annual.list[[i]])
 }
 
 
@@ -70,6 +73,11 @@ p1 = ggplot(heat.day) +
   labs(y = "Mean Temp (°C)") +
   plotCustom; p1
 
+ice.dec = ice |> mutate(dec.date = decimal_date(date_time)) |> 
+  mutate(z_water_m = - z_water_m) |> 
+  filter(yday(date_time) >= 244 & yday(date_time) <= 350) |> # Between Sep 1 and Dec 15 for all lakes 
+  mutate(location_name = factor(location_name, levels = c('Lake Fryxell','Lake Hoare', 'East Lake Bonney', 'West Lake Bonney'))) 
+
 p2 = ggplot(ice.dec) +
   geom_smooth(aes(x = dec.date, y = z_water_m, fill = location_name, col = location_name), 
               method = "gam", formula = y ~ s(x, k = 15), linewidth = 0.2) +
@@ -83,6 +91,9 @@ p2 = ggplot(ice.dec) +
   plotCustom + 
   theme(strip.background = element_blank(), strip.text.x = element_blank())
 
+ll.dec = ll |> mutate(dec.date = decimal_date(date_time)) |>
+  filter(yday(date_time) >= 244 & yday(date_time) <= 350) |> # Between Sep 1 and Dec 15 for all lakes 
+  mutate(location_name = factor(location_name, levels = c('Lake Fryxell','Lake Hoare', 'East Lake Bonney', 'West Lake Bonney'))) 
 p3 = ggplot(ll.dec) +
   geom_smooth(aes(x = dec.date, y = masl, fill = location_name, col = location_name), 
               method = "gam", formula = y ~ s(x, k = 15), linewidth = 0.2) +
@@ -195,6 +206,7 @@ coeffs_flux2 = bind_rows(lapply(X = 1:4, getCoeffs, usefit = output$reg.flux2))
 coeffs_flux3 = bind_rows(lapply(X = 1:4, getCoeffs, usefit = output$reg.flux3))
 coeffs_flux4 = bind_rows(lapply(X = 1:4, getCoeffs, usefit = output$reg.flux4))
 
+coeffs_ice1 = bind_rows(lapply(X = 1:4, getCoeffs, usefit = output$reg.ice1))
 
 latexTable <- function(coefffit, usecols = 8) {
   # Create the LaTeX table
@@ -221,25 +233,25 @@ latexTable(coeffs_temp1 |> bind_rows(coeffs_temp2) |> bind_rows(coeffs_temp3) |>
              mutate(Lake = factor(Lake, levels = c('LF','LH','ELB','WLB'))) |> 
              arrange(Lake), usecols = 9)
 
-# Table for Main Manuscript 
-#### r values for model correlation using "pearson" method ####
+# # Table for Main Manuscript 
+# #### r values for model correlation using "pearson" method ####
 cor4 = round(cor(annual.list[[1]]$temp, annual.list[[1]]$LL, use = 'pairwise.complete.obs'),3)
 cor5 = round(cor(annual.list[[1]]$temp, annual.list[[1]]$iceZ, use = 'pairwise.complete.obs'),3)
 cor6 = round(cor(annual.list[[2]]$temp, annual.list[[2]]$iceZ, use = 'pairwise.complete.obs'),3)
 cor7 = round(cor(annual.list[[3]]$temp, annual.list[[3]]$LL, use = 'pairwise.complete.obs'),3)
-cor8 = round(cor(annual.list[[4]]$temp, annual.list[[4]]$LL, use = 'pairwise.complete.obs'),3)
+cor8 = round(cor(annual.list[[4]]$temp, annual.list[[4]]$iceZ, use = 'pairwise.complete.obs'),3)
 round(cor(annual.list[[4]]$temp, annual.list[[4]]$iceZ, use = 'pairwise.complete.obs'),3)
 
-latexTable(coeffs_fit5.5 |> filter(Lake == 'LF') |> 
-             select(-Tolerance, -VIF) |> 
-             mutate(r = c(cor4, cor5)) |> 
-             bind_rows(coeffs_fit5 |> 
-                         filter(Lake == 'LH') |> 
-                         mutate(r = cor6)) |> 
-             bind_rows(coeffs_fit4 |> 
-                         filter(Lake %in% c('ELB','WLB')) |> 
-                         mutate(r = c(cor7, cor8))) |>
-             mutate(Lake = factor(Lake, levels = c('LF','LH','ELB','WLB'))) |> 
+latexTable(coeffs_temp3 |> filter(Lake == 'LF') |>
+             select(-Tolerance, -VIF) |>
+             mutate(r = c(cor4, cor5)) |>
+             bind_rows(coeffs_temp2 |>
+                         filter(Lake %in% c('LH', 'WLB')) |>
+                         mutate(r = c(cor6, cor8))) |>
+             bind_rows(coeffs_temp1 |>
+                         filter(Lake %in% c('ELB')) |>
+                         mutate(r = c(cor7))) |>
+             mutate(Lake = factor(Lake, levels = c('LF','LH','ELB','WLB'))) |>
              arrange(Lake), usecols = 8)
 
 # Manuscript Table for Flux 
@@ -249,7 +261,6 @@ corf3 = round(cor(annual.list[[3]]$flux, annual.list[[3]]$iceZ, use = 'pairwise.
 corf4 = round(cor(annual.list[[3]]$flux, annual.list[[3]]$ice.diff, use = 'pairwise.complete.obs'),3)
 corf5 = round(cor(annual.list[[4]]$flux, annual.list[[4]]$iceZ, use = 'pairwise.complete.obs'),3)
 # corf6 = round(cor(annual.list[[4]]$flux, annual.list[[4]]$ice.diff, use = 'pairwise.complete.obs'),3)
-
 
 latexTable(coeffs_flux3 |> 
                          filter(Lake == 'LF') |> 
@@ -266,4 +277,79 @@ latexTable(coeffs_flux3 |>
                          mutate(r = corf5)) |> 
              mutate(Lake = factor(Lake, levels = c('LF','LH','ELB','WLB'))) |> 
              arrange(Lake), usecols = 8)
+
+################### scatter plots of heat flux vs ice ####################
+pvalsIceZ = coeffs_flux2 |> bind_cols(location_name = c('Lake Fryxell','Lake Hoare', 'East Lake Bonney', 'West Lake Bonney')) |> 
+  mutate(p = round(`Pr(>|t|)`,3)) |> 
+  mutate(location_name = factor(location_name, levels = c('Lake Fryxell','Lake Hoare', 'East Lake Bonney', 'West Lake Bonney'))) 
+
+ph1 = ggplot(annual.df) +
+  geom_smooth(aes(x = iceZ, y = flux, fill = location_name), method = 'lm', col = 'grey50', linetype = 2, linewidth = 0.3, alpha = 0.2) +
+  geom_point(aes(x = iceZ, y = flux, col= location_name)) +
+  scale_fill_manual(values = usecolors) +
+  scale_color_manual(values = usecolors) +
+  facet_wrap(~location_name, scales = 'free', nrow = 1) +
+  geom_text(
+    data = pvalsIceZ, 
+    aes(x = Inf, y = Inf, label = paste0('p = ',p)), 
+    hjust = 1.1, vjust = 1.5, size = 2.5, fontface = "bold", inherit.aes = FALSE) +
+  facet_wrap(~location_name, scales = 'free', nrow = 1) +
+  ylab('Heat Flux\n(W m^<sup>-2</sup>)') +
+  xlab('Ice Thickness (m)') +
+  theme_bw(base_size = 9) +
+  theme(axis.title.y = element_markdown(),
+        legend.position = 'none',
+        strip.background = element_rect(fill = "white", color = NA),  # Set background to white and remove border
+        strip.text = element_text(color = "black", face = "bold", size = 9))
+
+pvalsIceD = coeffs_flux3 |> bind_cols(location_name = c('Lake Fryxell','Lake Hoare', 'East Lake Bonney', 'West Lake Bonney')) |> 
+  mutate(p = round(`Pr(>|t|)`,3)) |> 
+  mutate(location_name = factor(location_name, levels = c('Lake Fryxell','Lake Hoare', 'East Lake Bonney', 'West Lake Bonney'))) 
+
+ph2 = ggplot(annual.df) +
+  geom_smooth(aes(x = ice.diff, y = flux, fill = location_name), method = 'lm', col = 'grey50', linetype = 2, linewidth = 0.3, alpha = 0.2) +
+  geom_point(aes(x = ice.diff, y = flux, col= location_name)) +
+  scale_fill_manual(values = usecolors) +
+  scale_color_manual(values = usecolors) +
+  facet_wrap(~location_name, scales = 'free', nrow = 1) +
+  geom_text(
+    data = pvalsIceD, 
+    aes(x = Inf, y = Inf, label = paste0('p = ',p)), 
+    hjust = 1.1, vjust = 1.5, size = 2.5, fontface = "bold", inherit.aes = FALSE) +
+  ylab('Heat Flux\n(W m^<sup>-2</sup>)') +
+  xlab('∆ Ice Thickness (m)') +
+  theme_bw(base_size = 9) +
+  theme(axis.title.y = element_markdown(),
+        legend.position = 'none',
+        strip.background = element_blank(), strip.text.x = element_blank())
+
+# Join scatter plots together
+ph1/ph2 + plot_layout(guides = 'collect') +
+  plot_annotation(tag_levels = 'a', tag_suffix = ')') &
+  theme(plot.tag = element_text(size = 8),
+        plot.margin = margin(0.3, 0.3, 0.3, 0.3),
+        legend.margin = margin(0, 0, 0, 0))
+
+ggsave('figures/Fig5_scatterplots.png', width = 6, height = 4, dpi = 500)
+
+
+
+coeffs_ice1
+
+ggplot(annual.df) +
+  geom_smooth(aes(x = LL, y = temp, fill = location_name), method = 'lm', col = 'grey50', linetype = 2, linewidth = 0.3, alpha = 0.2) +
+  geom_point(aes(x = LL, y = temp, col= location_name)) +
+  scale_fill_manual(values = usecolors) +
+  scale_color_manual(values = usecolors) +
+  facet_wrap(~location_name, scales = 'free', nrow = 1) +
+  geom_text(
+    data = pvalsIceD, 
+    aes(x = Inf, y = Inf, label = paste0('p = ',p)), 
+    hjust = 1.1, vjust = 1.5, size = 2.5, fontface = "bold", inherit.aes = FALSE) +
+  xlab('Ice Thickness (m)') +
+  ylab('∆ Ice Thickness (m)') +
+  theme_bw(base_size = 9) +
+  theme(axis.title.y = element_markdown(),
+        legend.position = 'none',
+        strip.background = element_blank(), strip.text.x = element_blank())
 
