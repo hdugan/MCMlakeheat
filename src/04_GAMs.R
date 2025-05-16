@@ -103,7 +103,7 @@ p3 = ggplot(ll.dec) +
   geom_point(data = annual.df, 
              mapping = aes(x = dec.date, y = LL, fill = location_name), 
              shape = 24, size = 1, stroke = 0.2) +
-  labs(y = "Lake Level (m)")  +
+  labs(y = "Lake Level (m asl)")  +
   plotCustom +
   theme(strip.background = element_blank(), strip.text.x = element_blank())
 
@@ -111,7 +111,7 @@ p3 = ggplot(ll.dec) +
 p5 = ggplot(annual.df) +
   geom_col(aes(x = dec.date, y = flux, fill = location_name)) +
   # ylab('Heat Flux\n(W/m2)') +
-  ylab('Heat Flux\n(W m^<sup>-2</sup>)') +
+  ylab('Heat Flux\n(W m<sup>-2</sup>)') +
   ylim(-1.2,0.75) +
   plotCustom + 
   theme(strip.background = element_blank(), strip.text.x = element_blank(), axis.title.y = element_markdown())
@@ -294,7 +294,7 @@ ph1 = ggplot(annual.df) +
     aes(x = Inf, y = Inf, label = paste0('p = ',p)), 
     hjust = 1.1, vjust = 1.5, size = 2.5, fontface = "bold", inherit.aes = FALSE) +
   facet_wrap(~location_name, scales = 'free', nrow = 1) +
-  ylab('Heat Flux\n(W m^<sup>-2</sup>)') +
+  ylab('Heat Flux\n(W m<sup>-2</sup>)') +
   xlab('Ice Thickness (m)') +
   theme_bw(base_size = 9) +
   theme(axis.title.y = element_markdown(),
@@ -330,7 +330,7 @@ ph1/ph2 + plot_layout(guides = 'collect') +
         plot.margin = margin(0.3, 0.3, 0.3, 0.3),
         legend.margin = margin(0, 0, 0, 0))
 
-ggsave('figures/Fig5_scatterplots.png', width = 6, height = 4, dpi = 500)
+ggsave('figures/Fig5_scatterplots.png', width = 6.5, height = 4, dpi = 500)
 
 # 
 # 

@@ -72,6 +72,13 @@ df.full.ice |>
   summarise(minT = min(tempUse, na.rm = T), maxT = max(tempUse, na.rm = T),
             minC = min(condUse, na.rm = T), maxC = max(condUse, na.rm = T))
 
+
+df.full.ice |> 
+  group_by(location_name) |> 
+  mutate(location_name = factor(location_name, levels = c('Lake Fryxell','Lake Hoare', 'East Lake Bonney', 'West Lake Bonney'))) |> 
+  summarise(minT = min(tempUse, na.rm = T), maxT = max(tempUse, na.rm = T),
+            minC = min(condUse, na.rm = T), maxC = max(condUse, na.rm = T))
+
 # salinity (g/kg) - except using g/ml in manuscipt 
 df.sal |>   
   group_by(location_name) |> 

@@ -46,7 +46,7 @@ makeTemp <- function(name, filllimits = c(NA,NA)) {
               aes(x = date_time, y = depth.asl), fill = 'grey80', width = 150, height = 0.1) +
     scale_fill_scico(palette = 'roma', direction = -1, name = 'Temp (°C)', limits = filllimits, na.value = 'black') +
     labs(title = name) +
-    ylab('Depth asl (m)') +
+    ylab('Elevation (m asl)') +
     theme_bw(base_size = 9) +
     theme(axis.title.x = element_blank(),
           plot.title = element_text(size = 10),
@@ -145,7 +145,7 @@ t5 = ggplot(heat_flux |> filter(!is.na(flux_W_m2)),
   geom_hline(yintercept = 0, linetype = "dashed", color = "gray50") +
   scale_color_manual(values = usecolors, name = 'Lake') +
   # ylab("Heat Flux (W/m²)") +
-  ylab('Heat Flux (W m^<sup>-2</sup>)') +
+  ylab('Heat Flux (W m<sup>-2</sup>)') +
   theme_bw(base_size = 9) +
   theme(axis.title.x = element_blank(),
         axis.title.y = element_markdown(),
@@ -165,7 +165,7 @@ t6 = t1 + t2 +t3 + t4 + plot_layout(guides = 'collect') &
   legend.key.width = unit(1.5,'cm')); t6
 
 plot_grid(t6, t5, nrow = 2, rel_heights = c(2,1), labels = c('a)', 'b)'), label_size = 9, label_fontface = "plain")
-ggsave('figures/Fig3_HeatFlux.png', width = 6, height = 6, dpi = 500)
+ggsave('figures/Fig3_HeatFlux.png', width = 6.5, height = 6, dpi = 500)
 
 ### Summarise by day ###
 heat.day = hypo.fill |> 

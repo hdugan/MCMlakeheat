@@ -276,7 +276,9 @@ ct2 = ggplot(df.full.ice |>
             aes(xmin = ctd_conductivity_mscm, xmax = ctd_conductivity_mscm, ymin = max.depth, ymax = min.depth, group = year(date_time)), 
             color = 'grey50',size = 0.3) +
   geom_path(aes(x = condUse, y = depth.asl, group = date_time, color = year(date_time))) +
-  ylab('Elevation (m asl)') + xlab('Conductivity (mS cm^-1 )') +
+  ylab('Elevation (m asl)') + 
+  xlab('Conductivity (mS cm<sup>-1</sup>)') +
+  # xlab('Conductivity (mS cm^-1 )') +
   scale_color_scico(palette = 'bilbao', name = 'Year', direction = -1, end = 0.9) +
   theme_bw(base_size = 9) +
   facet_wrap(~location_name, scales = 'free', nrow = 1) +
@@ -289,7 +291,7 @@ ct1 / ct2 + plot_layout(guides = 'collect') +
         legend.key.width = unit(1, 'cm'), legend.key.height = unit(0.3, 'cm'),
         legend.title = element_blank(),
         legend.margin = margin(0, 0, 0, 0))
-ggsave('figures/Fig1_CTD.png', width = 6, height = 5, dpi = 500)
+ggsave('figures/Fig1_CTD.png', width = 6.5, height = 5, dpi = 500)
 
 
 # Figure 2: Same plot but of CTD changes 
@@ -313,7 +315,9 @@ diffprofile = df.full.ice |>
   
 c2 = ggplot(diffprofile) +
   geom_path(aes(x = newCond, y = depth.asl, group = date_time, color = year(date_time))) +
-  ylab('Elevation (m asl)') + xlab('\u0394  Conductivity (mS cm^-1 )') +
+  ylab('Elevation (m asl)') + 
+  # xlab('\u0394  Conductivity (mS cm^-1 )') +
+  xlab('\u0394 Conductivity (mS cm<sup>-1</sup>)') +
   scale_color_scico(palette = 'bilbao', name = 'Year', direction = -1, end = 0.9) +
   theme_bw(base_size = 9) +
   theme(axis.title.x = element_markdown(),
