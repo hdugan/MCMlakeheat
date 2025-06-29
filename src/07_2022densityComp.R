@@ -1,3 +1,11 @@
+##############################################################################
+# This code does a lot with ions + salinity. In the end outputs figure of
+# Density comparisons for the bottom of ELB and WLB using the Gibbs function (Feistel, 2008), the
+# UNESCO equation of state (Fofonoff and Millard, 1983), and equations from Spigel and Priscu (1996). 
+# Blue circles are measured density using Anton Paar DMA 35 density meter.
+##############################################################################
+
+
 # Load libraries
 library(tidyverse)
 library(lubridate)
@@ -22,17 +30,28 @@ density.mean = density.df |>
   summarise_all(mean, na.rm = T)
 
 ###### CTD Round #########
-# Priscu, J. 2023. Conductivity, temperature, and depth (CTD) vertical profiles collected from lakes in the 
-# McMurdo Dry Valleys, Antarctica (1993-2023, ongoing) ver 17. Environmental Data Initiative. 
-# https://doi.org/10.6073/pasta/650871571843bde5e0db6fb52cf549a4 (Accessed 2024-06-25).
-# Read in 2023 data (will be online soon)
-inUrl1  <- "https://pasta.lternet.edu/package/data/eml/knb-lter-mcm/88/17/91474a205d3dd99cc794f8510d2d99c5" 
+# Takacs-Vesbach, C. and J. Priscu. 2025. Conductivity, temperature, and depth (CTD) vertical profiles collected from lakes in the McMurdo Dry Valleys, Antarctica (1993-2023, ongoing) ver 18. 
+# Environmental Data Initiative. https://doi.org/10.6073/pasta/004de32b27fc88954abdce0ff8a3bbb3 (Accessed 2025-06-29).
+
+# Package ID: knb-lter-mcm.88.17 Cataloging System:https://pasta.edirepository.org.
+inUrl1  <- "https://pasta.lternet.edu/package/data/eml/knb-lter-mcm/88/18/91474a205d3dd99cc794f8510d2d99c5" 
 infile1 <- tempfile()
 download.file(inUrl1,infile1,method="curl")
 
 ctd.2022 <- read_csv(infile1) |> 
   mutate(date_time = as.Date(mdy_hm(date_time))) |>
-  filter(year(date_time) == 2022, month(date_time) %in% c(11,12))
+  filter(year(date_time) %in% c(2022,2023), month(date_time) %in% c(11,12)) |> 
+  filter(location_name %in% c('West Lake Bonney', 'East Lake Bonney', 'Lake Fryxell','Lake Hoare')) |> 
+  select(location_name, date_time, depth_m = wire_corrected_depth_m, ctd_temp_c, ctd_conductivity_mscm) |> 
+  mutate(depth_m = round(depth_m, 1)) |> 
+  mutate(depth.asl.char = as.character(depth_m)) |> 
+  group_by(location_name, date_time, depth.asl.char) |> 
+  summarise_all(first) |> 
+  ungroup() |> 
+  # mutate(depthdiff = abs(depth_1m - depth_m)) |> 
+  group_by(location_name, date_time) |> 
+  filter(n() >= 5) |> 
+  mutate(date_time = `year<-`(date_time, 2022))
 
 ctd2023 = read_csv('datain/ctd_2023.csv') |> 
   mutate(date_time = as.Date(mdy_hm(date_time))) |> 
@@ -70,7 +89,7 @@ fill_and_interpolate <- function(df, maxgap = 25) {
 }
 
 # Apply the function
-ctd.round.fill = fill_and_interpolate(ctd2023)
+ctd.round.fill = fill_and_interpolate(ctd.2022)
 ctd.round.fill |> group_by(location_name, date_time) |> summarise_all(first)
 
 ctd.dates = ctd.round.fill |> 
@@ -279,7 +298,7 @@ p.sal = ggplot(salinity.df2 |>
 
 # Save figures
 p.cond / p.dens / p.sal
-ggsave('figures/densityComp.png', width = 5, height = 8, dpi = 500)
+# ggsave('figures/densityComp.png', width = 5, height = 8, dpi = 500)
  
 # Zoomed in
 ggplot(salinity.df2 |> 
@@ -315,7 +334,10 @@ ggplot(df.zoom) +
   xlab('Density (kg m<sup>-3</sup>)') + ylab('Depth (m)') +
   facet_wrap(~location_name, scales = 'free')  +
   theme_bw(base_size = 9) +
-  theme(axis.title.x = element_markdown())
+  theme(strip.background = element_rect(fill = "white", color = NA),  # Set background to white and remove border
+        strip.text = element_text(color = "black", face = "bold", size = 10), 
+        axis.title.x = element_markdown())
+# theme(axis.title.x = element_markdown())
 
 ggsave('figures/SI_DensityComp.png', width = 6, height = 2.5, dpi = 500, units = 'in')
 
