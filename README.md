@@ -1,9 +1,11 @@
 ## Code repository for *Ice thickness regulates heat flux in permanently ice-covered lakes in Antarctica*
 
 ### Datasets used:
-Takacs-vesbach, C.D., Priscu, J.C. 2025. Conductivity, temperature, and depth (CTD) vertical profiles collected from lakes in the McMurdo Dry Valleys, Antarctica (1993-2023, ongoing). Environmental Data Initiative. DOI: 10.6073/pasta/004de32b27fc88954abdce0ff8a3bbb3. Dataset accessed 14 April 2025.
+Takacs-vesbach, C.D., Priscu, J.C. 2025. Conductivity, temperature, and depth (CTD) vertical profiles collected from lakes in the McMurdo Dry Valleys, Antarctica (1993-2023, ongoing) ver 18. Environmental Data Initiative. DOI: 10.6073/pasta/004de32b27fc88954abdce0ff8a3bbb3. Dataset accessed 14 April 2025.
 
 Takacs-Vesbach, C. and J. Priscu. 2025. Lake ice thickness and density measurements, McMurdo Dry Valleys, Antarctica (1989-2025, ongoing) ver 17. Environmental Data Initiative. https://doi.org/10.6073/pasta/e72dc49d774796767884c535e864c915 (Accessed 2025-04-14).
+
+Doran, P.T. and M.N. Gooseff. 2025. Lake level surveys in the McMurdo Dry Valleys, Antarctica (1968-2025, ongoing) ver 14. Environmental Data Initiative. https://doi.org/10.6073/pasta/649e1e54f663e8077f6ca96352e703ba 
 
 ### How to reproduce figures and output statistics
 
