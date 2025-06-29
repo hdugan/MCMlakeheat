@@ -6,11 +6,11 @@ library(ggtext)
 
 source('src/00_gethypso.R')
 
-# Doran, P. and M. Gooseff. 2023. Lake level surveys in the McMurdo Dry Valleys, Antarctica (1991-2023, ongoing) 
-# ver 13. Environmental Data Initiative. 
-# https://doi.org/10.6073/pasta/927439563d37c9461011e0060a5c1a87 (Accessed 2024-06-25).
+# Doran, P.T. and M.N. Gooseff. 2025. Lake level surveys in the McMurdo Dry Valleys, Antarctica (1968-2025, ongoing) ver 14. 
+# Environmental Data Initiative. https://doi.org/10.6073/pasta/649e1e54f663e8077f6ca96352e703ba (Accessed 2025-06-29).
 
-inUrl1  <- "https://pasta.lternet.edu/package/data/eml/knb-lter-mcm/68/13/76751b6f6ffa289845a830d6581d52fe" 
+
+inUrl1  <- "https://pasta.lternet.edu/package/data/eml/knb-lter-mcm/68/14/e0091a3abd3426a4288a5fafc72037cf" 
 infile1 <- tempfile()
 download.file(inUrl1,infile1,method="curl")
 
@@ -25,19 +25,14 @@ download.file(inUrl1,infile1,method="curl")
 #   }
 # )
 
-ll2023 = read_csv('datain/ll_2023.csv')
 
 ll <- read_csv(infile1) |> 
-  mutate(date_time = as.Date(mdy_hm(date_time))) |> 
-  bind_rows(ll2023) |>
-  rename(masl = `lake level(masl)`) |> 
-  select(-`reference benchmark`, -`surveying benchmark`, -comments, -dataset_code) |> 
-  filter(lake %in% c('Lake Bonney', 'Lake Fryxell','Lake Hoare')) |> 
-  mutate(location_name = case_when(lake == 'Lake Fryxell' ~ 'Lake Fryxell', 
-                                   lake == 'Lake Hoare' ~ 'Lake Hoare', 
-                                   lake == 'Lake Bonney' ~ 'East Lake Bonney')) %>% 
-  bind_rows(. |> filter(lake == 'Lake Bonney') |> mutate(location_name = 'West Lake Bonney')) |> # Duplicate Bonney
-  select(-lake) |> 
+  mutate(date_time = as.Date(date_surveyed)) |> 
+  # bind_rows(ll2023) |>
+  rename(masl = lake_level_masl) |> 
+  select(-benchmark, -surveyors, -dataset_code) |> 
+  filter(location_name %in% c('East Lake Bonney', 'Lake Fryxell','Lake Hoare')) %>% 
+  bind_rows(. |> filter(location_name == 'East Lake Bonney') |> mutate(location_name = 'West Lake Bonney')) |> # Duplicate Bonney
   group_by(date_time, location_name) |>
   summarise_all(mean, na.rm = T) |> 
   ungroup()
@@ -54,7 +49,7 @@ lake.volume = ll |>
   mutate(location_name = factor(location_name, levels = c('Lake Fryxell','Lake Hoare', 'East Lake Bonney', 'West Lake Bonney')))
 
 # Approximate and duplicate for Lake Bonney
-ll.interp = expand_grid(date_time = seq.Date(as.Date('1991-01-26'), as.Date('2023-11-23'), by = 'day'),
+ll.interp = expand_grid(date_time = seq.Date(as.Date('1991-01-26'), as.Date('2025-02-01'), by = 'day'),
                         location_name = c('Lake Fryxell','Lake Hoare', 'East Lake Bonney', 'West Lake Bonney')) |> 
   left_join(lake.volume |> select(date_time, location_name, masl, Area_2D, cum_vol_m3)) |> 
   arrange(location_name, date_time, masl) |> 
@@ -99,7 +94,7 @@ ice <- read_csv(infile1) |>
 
 # Interpolate ice thickness
 ice.interp = expand_grid(location_name = c('East Lake Bonney', 'West Lake Bonney', 'Lake Fryxell','Lake Hoare'),
-                         date_time = seq.Date(as.Date('1993-12-09'), as.Date('2023-11-23'), by = 'day')) |> 
+                         date_time = seq.Date(as.Date('1993-12-09'), as.Date('2025-02-01'), by = 'day')) |> 
   left_join(ice) |> 
   group_by(location_name) |> 
   mutate(ice.approx = na.approx(z_water_m, na.rm = FALSE, rule = 2)) |> 
@@ -162,27 +157,3 @@ ggplot(ice.interp |> filter(month(date_time) %in% c(10,11,12,1))) +
         legend.margin = margin(0, 0, 0, 0))
 
 ggsave('figures/SI_IceThickness.png', width = 6, height = 2.5, dpi = 500)
-
-
-ggplot(lake.volume) +
-  geom_smooth(aes(x = date_time, y = cum_vol_m3, color = location_name),
-              method = 'gam', formula = y ~ s(x, bs = "cs", k = 15)) +
-  geom_point(aes(x = date_time, y = cum_vol_m3, fill = location_name), shape = 21, stroke = 0.2, size = 1) +
-  geom_smooth(data = lake.volume.ice, aes(x = date_time, y = cum_vol_m3_ice, color = location_name), linewidth = 0.4, 
-              method = 'gam', formula = y ~ s(x, bs = "cs", k = 15)) + #k = number of inflection points
-  geom_point(data = lake.volume.ice, aes(x = date_time, y = cum_vol_m3_ice, fill = location_name), shape = 22, stroke = 0.2, size = 1) +
-  # geom_path(aes(x = date_time, y = ice.approx)) +
-  scale_color_manual(values = c("#BB9F2F", "#94B9AF", "#942911", "#593837"), name = 'Lake') +
-  scale_fill_manual(values = c("#BB9F2F", "#94B9AF", "#942911", "#593837"), name = 'Lake') +
-  ylab('Volume (m^3 )') +
-  theme_bw(base_size = 9) +
-  facet_wrap(~location_name, scales = 'free', nrow = 4) +
-  theme(axis.title.x = element_blank(),
-        legend.position = 'bottom',
-        legend.title = element_blank(),
-        legend.text = element_text(size = 7), 
-        legend.key.size = unit(0.2,'cm'),
-        legend.margin = margin(0, 0, 0, 0), 
-        axis.title.y = element_markdown())
-
-ggsave('figures/SI_Volume.png', width = 6, height = 6, dpi = 500)

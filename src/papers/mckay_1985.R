@@ -10,9 +10,9 @@
 # L = heat flux due to latent heat release at the ice-water interface
 
 # L = vpl 
-# v is the rate of formation of new ice averaged over the entire year, equal to the ablation rate, 
-# p is the density of the ice and 
-# I is the latent heat of fusion of water
+# v is the rate of formation of new ice averaged over the entire year, equal to the ablation rate, # m year-1
+# p is the density of the ice and # kg/m3
+# l is the latent heat of fusion of water # J/kg
 
 # To solve equation [1] for the temperature of the ice cover as a function of depth
 # S(z) = (1-a)(1-r)So exp(-z/h) 
@@ -40,7 +40,7 @@ Z = (b*ln(T0/Ts) + c*(Ts-T0) - S0*(1-a)*(1-r)*h*(1-exp(-Z/h))) / (v*p*l + Fg)
 # and in the approximation that the thermal conductivity is independent of temperature (k =
 # constant) and the geothermal flux is small, this equation reduces to
 
-Z = (k*(T0-Ts) - S0*(1-a)*(1-r)*h) / (v*p*l/ 3.154e+7)
+Z = (k*(T0-Ts) - S0*(1-a)*(1-r)*h) / (v*p*l/ 3.154e+7) # 3.154e+7 = seconds in a year
 
 a = 0.6
 Ts = -20 

@@ -44,12 +44,10 @@ hoare_LF = read_csv('datain/papers/Hoare_Nov_1963.csv') |>
 # 4 meters for Lake Bonney
 # 1.9 meters for Lake Fryxell 
 
-# Priscu, J. 2023. Conductivity, temperature, and depth (CTD) vertical profiles collected from lakes in the 
-# McMurdo Dry Valleys, Antarctica (1993-2023, ongoing) ver 17. Environmental Data Initiative. 
-# https://doi.org/10.6073/pasta/650871571843bde5e0db6fb52cf549a4 (Accessed 2024-06-25).
+# Takacs-Vesbach, C. and J. Priscu. 2025. Conductivity, temperature, and depth (CTD) vertical profiles collected from lakes in the McMurdo Dry Valleys, Antarctica (1993-2023, ongoing) ver 18. 
+# Environmental Data Initiative. https://doi.org/10.6073/pasta/004de32b27fc88954abdce0ff8a3bbb3 (Accessed 2025-06-29).
 
 # Package ID: knb-lter-mcm.88.17 Cataloging System:https://pasta.edirepository.org.
-# inUrl1  <- "https://pasta.lternet.edu/package/data/eml/knb-lter-mcm/88/17/91474a205d3dd99cc794f8510d2d99c5" 
 inUrl1  <- "https://pasta.lternet.edu/package/data/eml/knb-lter-mcm/88/18/91474a205d3dd99cc794f8510d2d99c5" 
 infile1 <- tempfile()
 download.file(inUrl1,infile1,method="curl")

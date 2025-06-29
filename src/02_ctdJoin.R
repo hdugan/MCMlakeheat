@@ -254,7 +254,7 @@ ct1 = ggplot(df.full.ice |>
                mutate(location_name = factor(location_name, levels = c('Lake Fryxell','Lake Hoare', 'East Lake Bonney', 'West Lake Bonney')))) + 
   geom_rect(data = icebox,
             aes(xmin = ctd_temp_c, xmax = ctd_temp_c, ymin = max.depth, ymax = min.depth, group = year(date_time)), 
-            color = 'grey50',size = 0.3) +
+            color = 'grey50',linewidth = 0.3) +
   geom_path(aes(x = tempUse, y = depth.asl, group = date_time, color = year(date_time))) +
   ylab('Elevation (m asl)') + xlab('Temperature (°C)') +
   scale_color_scico(palette = 'bilbao', name = 'Year', direction = -1, end = 0.9) +
@@ -274,7 +274,7 @@ ct2 = ggplot(df.full.ice |>
                mutate(location_name = factor(location_name, levels = c('Lake Fryxell','Lake Hoare', 'East Lake Bonney', 'West Lake Bonney')))) + # This is just here to trick the yaxis range
   geom_rect(data = icebox,
             aes(xmin = ctd_conductivity_mscm, xmax = ctd_conductivity_mscm, ymin = max.depth, ymax = min.depth, group = year(date_time)), 
-            color = 'grey50',size = 0.3) +
+            color = 'grey50',linewidth = 0.3) +
   geom_path(aes(x = condUse, y = depth.asl, group = date_time, color = year(date_time))) +
   ylab('Elevation (m asl)') + 
   xlab('Conductivity (mS cm<sup>-1</sup>)') +
@@ -375,7 +375,7 @@ samplingdays = df.full.ice |>
   mutate(location_name = factor(location_name, levels = c('Lake Fryxell','Lake Hoare', 'East Lake Bonney', 'West Lake Bonney'))) |> 
   mutate(wateryear = if_else(month(date_time) >= 10, year(date_time) + 1, year(date_time)))
 
-# Highlight profiles used for averging 
+# Highlight profiles used for averaging 
 source('src/functions/profileAvgDates.R')
 # this returns chosen dates for each lake
 bestdates
