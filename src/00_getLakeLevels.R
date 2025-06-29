@@ -134,8 +134,12 @@ ggplot(ll.interp) +
   facet_wrap(~location_name, scales = 'free', nrow = 4) +
   ylab('Lake Level (m asl)') +
   theme_bw(base_size = 9) +
-  theme(axis.title.x = element_blank(), 
+  theme(strip.background = element_rect(fill = "white", color = NA),  # Set background to white and remove border
+        strip.text = element_text(color = "black", face = "bold", size = 10), 
+        axis.title.x = element_blank(), 
         legend.position = 'none')
+  # theme(axis.title.x = element_blank(), 
+  #       legend.position = 'none')
 
 ggsave('figures/SI_lakelevel.png', width = 6, height = 4, dpi = 500)
 

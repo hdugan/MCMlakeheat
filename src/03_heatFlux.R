@@ -49,7 +49,7 @@ makeTemp <- function(name, filllimits = c(NA,NA)) {
     ylab('Elevation (m asl)') +
     theme_bw(base_size = 9) +
     theme(axis.title.x = element_blank(),
-          plot.title = element_text(size = 10),
+          plot.title = element_text(size = 9, face = 'bold'),
           legend.text = element_text(size = 7),
           legend.key.width = unit(0.2,'cm'))
 }

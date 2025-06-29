@@ -340,8 +340,11 @@ c1 = ggplot(diffprofile) +
   ylab('Elevation (m asl)') + xlab('\u0394 Temperature (°C)') +
   scale_color_scico(palette = 'bilbao', name = 'Year', direction = -1, end = 0.9) +
   theme_bw(base_size = 9) +
-  theme(axis.title.x = element_markdown(),
-        strip.text = element_blank()) +
+  theme(strip.background = element_rect(fill = "white", color = NA),  # Set background to white and remove border
+        strip.text = element_text(color = "black", face = "bold", size = 10), 
+        axis.title.x = element_markdown()) +
+  # theme(axis.title.x = element_markdown(),
+  #       strip.text = element_blank()) +
   facet_wrap(~location_name, scales = 'free', nrow = 1); c1
 
 diffprofile |> group_by(location_name) |> summarise(first(initialDate))
@@ -384,7 +387,9 @@ bestdates
 # 3 Lake Hoare         345     246 1995-12-11 
 # 4 West Lake Bonney   327     107 1995-11-23 
 bestdates.df = data.frame(location_name = c('Lake Fryxell','Lake Hoare', 'East Lake Bonney', 'West Lake Bonney'), 
-                          representativeDate = as.Date(c('2023-11-25', '2023-12-11','2023-12-04','2023-11-23')))
+                          representativeDate = as.Date(c('2023-11-25', '2023-12-11','2023-12-04','2023-11-23'))) |> 
+  mutate(location_name = factor(location_name, levels = c('Lake Fryxell','Lake Hoare', 'East Lake Bonney', 'West Lake Bonney')))
+
 
 # Removedate where it's really challenging to get a consistency year to year
 chosendates2 = chosendates |> 
@@ -400,7 +405,10 @@ ggplot(samplingdays) +
   scale_y_continuous(breaks = seq(1993,2025, by = 2), name = 'Water Year') +
   scale_x_date(date_labels = '%b', date_breaks = '1 months', name = 'Day') +
   facet_wrap(~location_name) +
-  theme(axis.title.x = element_blank())
+  theme(strip.background = element_rect(fill = "white", color = NA),  # Set background to white and remove border
+        strip.text = element_text(color = "black", face = "bold", size = 10), 
+        axis.title.x = element_blank())
+  # theme(axis.title.x = element_blank())
 
 ggsave('figures/SI_SamplingDays.png', width = 6, height = 4, dpi = 500)
 
