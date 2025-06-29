@@ -93,7 +93,8 @@ p2 = ggplot(ice.dec) +
 
 ll.dec = ll |> mutate(dec.date = decimal_date(date_time)) |>
   filter(yday(date_time) >= 244 & yday(date_time) <= 350) |> # Between Sep 1 and Dec 15 for all lakes 
-  mutate(location_name = factor(location_name, levels = c('Lake Fryxell','Lake Hoare', 'East Lake Bonney', 'West Lake Bonney'))) 
+  mutate(location_name = factor(location_name, levels = c('Lake Fryxell','Lake Hoare', 'East Lake Bonney', 'West Lake Bonney'))) |> 
+  filter(year(date_time) >= 1992)
 p3 = ggplot(ll.dec) +
   geom_smooth(aes(x = dec.date, y = masl, fill = location_name, col = location_name), 
               method = "gam", formula = y ~ s(x, k = 15), linewidth = 0.2) +
@@ -105,6 +106,7 @@ p3 = ggplot(ll.dec) +
              shape = 24, size = 1, stroke = 0.2) +
   labs(y = "Lake Level (m asl)")  +
   plotCustom +
+  scale_y_continuous(labels = scales::number_format(accuracy = 0.1)) +
   theme(strip.background = element_blank(), strip.text.x = element_blank())
 
 # Plots of Diffs 

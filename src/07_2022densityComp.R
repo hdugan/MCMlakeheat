@@ -329,7 +329,7 @@ df.zoom = salinity.df2 |>
 ggplot(df.zoom) +
   geom_path(data = df.zoom |> filter(name != 'density.Tadj'), aes(x = value, y = depth_m, col = name)) +
   geom_point(aes(x = value, y = depth_m, col = name)) +
-  scale_color_manual(values = c('red4','gold','lightblue3','red3')) +
+  scale_color_manual(values = c('red4','gold','lightblue3','red3'), name = '') +
   scale_y_reverse() +
   xlab('Density (kg m<sup>-3</sup>)') + ylab('Depth (m)') +
   facet_wrap(~location_name, scales = 'free')  +

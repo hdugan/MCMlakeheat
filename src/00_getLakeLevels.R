@@ -131,6 +131,7 @@ ggplot(ll.interp) +
   geom_path(aes(x = date_time, y = masl.approx), col = 'lightblue4') +
   geom_point(aes(x = date_time, y = masl, fill = location_name), shape = 21, stroke = 0.2) +
   scale_fill_manual(values = c("#BB9F2F", "#94B9AF", "#942911", "#593837"), name = 'Lake') +
+  scale_y_continuous(labels = scales::number_format(accuracy = 0.1)) +
   facet_wrap(~location_name, scales = 'free', nrow = 4) +
   ylab('Lake Level (m asl)') +
   theme_bw(base_size = 9) +
@@ -144,9 +145,9 @@ ggplot(ll.interp) +
 ggsave('figures/SI_lakelevel.png', width = 6, height = 4, dpi = 500)
 
 ggplot(ice.interp |> filter(month(date_time) %in% c(10,11,12,1))) +
-  geom_path(aes(x = date_time, y = ice.approx, color = location_name)) +
+  geom_path(aes(x = date_time, y = -ice.approx, color = location_name)) +
   geom_point(data = ice |> filter(month(date_time) %in% c(10,11,12,1)), 
-             aes(x = date_time, y = z_water_m, fill = location_name), shape = 21, stroke = 0.2, size = 1) +
+             aes(x = date_time, y = -z_water_m, fill = location_name), shape = 21, stroke = 0.2, size = 1) +
   # geom_path(aes(x = date_time, y = ice.approx)) +
   scale_color_manual(values = c("#BB9F2F", "#94B9AF", "#942911", "#593837"), name = 'Lake') +
   scale_fill_manual(values = c("#BB9F2F", "#94B9AF", "#942911", "#593837"), name = 'Lake') +
