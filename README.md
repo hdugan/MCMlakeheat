@@ -1,3 +1,4 @@
+[![DOI](https://zenodo.org/badge/820073655.svg)](https://doi.org/10.5281/zenodo.15832641)
 ## Code repository for *Ice thickness regulates heat flux in permanently ice-covered lakes in Antarctica*
 
 ### All data were collected by the McMurdo Dry Valleys Long Term Ecological Research program (https://mcm.lternet.edu/)
